@@ -65,7 +65,7 @@ const Profile = () => {
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("id", user.id)
         .single();
 
       if (profileError && profileError.code !== "PGRST116") {
@@ -111,7 +111,7 @@ const Profile = () => {
     try {
       // Fetch all user data
       const [profileData, consentData, masteredWords] = await Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", user.id),
+        supabase.from("profiles").select("*").eq("id", user.id),
         supabase.from("user_consent").select("*").eq("user_id", user.id),
         supabase.from("user_mastered_words").select("*").eq("user_id", user.id),
       ]);
