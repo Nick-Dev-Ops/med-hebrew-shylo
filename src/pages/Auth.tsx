@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,11 +37,12 @@ const Auth = () => {
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Redirect if already authenticated
   useEffect(() => {
-    // Check if user is already authenticated
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -49,6 +51,50 @@ const Auth = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  // Persist pending consent locally for post-confirmation upsert
+  const persistPendingConsent = () => {
+    try {
+      localStorage.setItem(
+        "pending_consent",
+        JSON.stringify({
+          termsAccepted,
+          privacyAccepted,
+          dataProcessingAccepted,
+          marketingAccepted,
+        })
+      );
+    } catch {}
+  };
+
+  const clearPendingConsent = () => {
+    try {
+      localStorage.removeItem("pending_consent");
+    } catch {}
+  };
+
+  // Persist pending profile locally for post-confirmation upsert
+  const persistPendingProfile = () => {
+    try {
+      localStorage.setItem(
+        "pending_profile",
+        JSON.stringify({
+          fullName,
+          specialization,
+          hospital,
+          medicalField,
+          howFoundUs,
+          profileDescription,
+        })
+      );
+    } catch {}
+  };
+
+  const clearPendingProfile = () => {
+    try {
+      localStorage.removeItem("pending_profile");
+    } catch {}
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,11 +123,26 @@ const Auth = () => {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          emailRedirectTo: redirectUrl
-        }
+        termsAccepted,
+        privacyAccepted,
+        dataProcessingAccepted,
       });
+      if (!validation.success) {
+        const msg = validation.error.errors[0]?.message || "Validation failed";
+        setError(msg);
+        return;
+      }
 
+      // Persist user-entered details to bridge email confirmation
+      persistPendingConsent();
+      persistPendingProfile();
+
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: redirectUrl },
+      });
       if (error) throw error;
 
       // Store consent information
@@ -107,7 +168,8 @@ const Auth = () => {
         title: "Success!",
         description: "Please check your email to confirm your account.",
       });
-      
+
+      // Clear only email/password; keep other UI state if needed
       setEmail("");
       setPassword("");
       setTermsAccepted(false);
@@ -121,6 +183,90 @@ const Auth = () => {
     }
   };
 
+  const upsertConsentForCurrentUser = async () => {
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) throw sessionErr;
+    const u = sessionData?.session?.user;
+    if (!u) throw new Error("No active session");
+
+    // Load pending consent if present
+    let consent = {
+      termsAccepted,
+      privacyAccepted,
+      dataProcessingAccepted,
+      marketingAccepted,
+    };
+    try {
+      const saved = localStorage.getItem("pending_consent");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        consent = {
+          termsAccepted: !!parsed.termsAccepted,
+          privacyAccepted: !!parsed.privacyAccepted,
+          dataProcessingAccepted: !!parsed.dataProcessingAccepted,
+          marketingAccepted: !!parsed.marketingAccepted,
+        };
+      }
+    } catch {}
+
+    const { error } = await supabase
+      .from("user_consent")
+      .upsert(
+        {
+          user_id: u.id,
+          terms_accepted: consent.termsAccepted,
+          privacy_accepted: consent.privacyAccepted,
+          data_processing_accepted: consent.dataProcessingAccepted,
+          marketing_accepted: consent.marketingAccepted,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        },
+        { onConflict: "user_id" }
+      );
+
+    if (error) throw error;
+    clearPendingConsent();
+  };
+
+  const upsertProfileForCurrentUser = async () => {
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) throw sessionErr;
+    const u = sessionData?.session?.user;
+    if (!u) throw new Error("No active session");
+
+    // Load pending profile if present
+    let payload = { fullName, specialization, hospital, medicalField, howFoundUs, profileDescription };
+    try {
+      const saved = localStorage.getItem("pending_profile");
+      if (saved) {
+        const p = JSON.parse(saved);
+        payload = {
+          fullName: p.fullName || "",
+          specialization: p.specialization || "",
+          hospital: p.hospital || "",
+          medicalField: p.medicalField || "",
+          howFoundUs: (p.howFoundUs as HowFoundUs) || "other",
+          profileDescription: p.profileDescription || "",
+        };
+      }
+    } catch {}
+
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: u.id,
+        full_name: payload.fullName,
+        specialization: payload.specialization,
+        hospital: payload.hospital,
+        medical_field: payload.medicalField,
+        how_found_us: payload.howFoundUs,
+        description: payload.profileDescription,
+      },
+      { onConflict: "id" }
+    );
+
+    if (error) throw error;
+    clearPendingProfile();
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -131,8 +277,11 @@ const Auth = () => {
         email,
         password,
       });
-
       if (error) throw error;
+
+      // With a valid session, perform upserts protected by RLS
+      await upsertConsentForCurrentUser();
+      await upsertProfileForCurrentUser();
 
       if (data.user) {
         toast({
@@ -141,8 +290,8 @@ const Auth = () => {
         });
         navigate("/");
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: any) {
+      setError(err?.message || "Sign in failed");
     } finally {
       setLoading(false);
     }
@@ -151,67 +300,67 @@ const Auth = () => {
   return (
     <>
       <Helmet>
-        <title>Sign In - Medical Terms Game</title>
-        <meta name="description" content="Sign in to your account to track your learning progress and access personalized features." />
+        <title>Sign In / Sign Up</title>
       </Helmet>
 
-      <div className="container mx-auto max-w-md py-12">
+      <div className="container mx-auto max-w-md py-8">
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
-            <CardDescription>
-              Sign in to track your learning progress
-            </CardDescription>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Account
+            </CardTitle>
+            <CardDescription>Access your account or create a new one.</CardDescription>
           </CardHeader>
+
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Tabs defaultValue="signin">
+              <TabsList className="grid grid-cols-2">
                 <TabsTrigger value="signin" className="flex items-center gap-2">
-                  <LogIn className="h-4 w-4" />
-                  Sign In
+                  <LogIn className="h-4 w-4" /> Sign In
                 </TabsTrigger>
                 <TabsTrigger value="signup" className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Sign Up
+                  <UserPlus className="h-4 w-4" /> Sign Up
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Email
+                  <div>
+                    <Label htmlFor="email-signin" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Email
                     </Label>
                     <Input
-                      id="signin-email"
+                      id="email-signin"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder="you@example.com"
                       required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Password
-                    </Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      required
+                      autoComplete="email"
                     />
                   </div>
 
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+                  <div>
+                    <Label htmlFor="password-signin" className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" /> Password
+                    </Label>
+                    <Input
+                      id="password-signin"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      autoComplete="current-password"
+                    />
+                  </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Signing in..." : "Sign In"}
@@ -221,28 +370,27 @@ const Auth = () => {
 
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Email
+                  <div>
+                    <Label htmlFor="email-signup" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Email  (required)
                     </Label>
                     <Input
-                      id="signup-email"
+                      id="email-signup"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder="you@example.com"
                       required
                       maxLength={255}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Password
+
+                  <div>
+                    <Label htmlFor="password-signup" className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" /> Password (required)
                     </Label>
                     <Input
-                      id="signup-password"
+                      id="password-signup"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}

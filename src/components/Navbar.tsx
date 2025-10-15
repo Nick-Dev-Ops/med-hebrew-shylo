@@ -1,19 +1,23 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
-import LanguageSwitcher from "./LanguageSwitcher";
-import { useTranslation } from "react-i18next"; // <-- Add this
 
-const games = [
-	{ nameKey: "nav_contactUs", path: "/ContactUs" },
-	{ nameKey: "nav_dictionary", path: "/Dictionary" },
-	{ nameKey: "nav_matching_game", path: "/MatchingGame" },
-	{ nameKey: "nav_quiz", path: "/Quiz" },
-	{ nameKey: "nav_learning", path: "/Learning" },
-	{ nameKey: "nav_home", path: "/" },
+import LanguageSwitcher from "./LanguageSwitcher";
+import { Menu, X, LogOut, User } from "lucide-react";
+
+type NavItem = { nameKey: string; path: string };
+
+const navItems: NavItem[] = [
+  { nameKey: "nav_home", path: "/" },
+  { nameKey: "nav_learning", path: "/Learning" },
+  { nameKey: "nav_quiz", path: "/Quiz" },
+  { nameKey: "nav_matching_game", path: "/MatchingGame" },
+  { nameKey: "nav_dictionary", path: "/Dictionary" },
+  { nameKey: "nav_contactUs", path: "/ContactUs" },
 ];
 
 const Navbar = () => {
