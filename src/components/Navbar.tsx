@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
 import LanguageSwitcher from "./LanguageSwitcher";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, User, GraduationCap } from "lucide-react";
 
 type NavItem = { nameKey: string; path: string };
 
@@ -30,55 +30,57 @@ const Navbar = () => {
 	const closeMenu = () => setIsMobileMenuOpen(false);
 
 	return (
-		<header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-900/80">
-			<div className="mx-auto flex items-center justify-between py-4 px-6">
+		<header className="bg-background/95 border-b border-border shadow-sm sticky top-0 z-50 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+			<div className="container mx-auto flex items-center justify-between py-3 px-4 md:px-6">
 				{/* Logo */}
-				<h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-					<Link to="/">
+				<Link to="/" className="flex items-center gap-2 group transition-all duration-200 hover:opacity-80">
+					<GraduationCap className="h-7 w-7 text-primary" />
+					<h1 className="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
 						MED-IVRIT
-					</Link>			
-				</h1>
+					</h1>
+				</Link>
+				
 				{/* Desktop Nav and Theme Toggle */}
-				<div className="hidden md:flex items-center gap-4">
-					<nav className="flex space-x-6">
-						{navItems.map((game) => (
+				<div className="hidden lg:flex items-center gap-6">
+					<nav className="flex items-center gap-1">
+						{navItems.map((item) => (
 							<Link
-								key={game.path}
-								to={game.path}
-								className={`font-semibold transition-colors duration-200 ${
-									location.pathname === game.path
-										? "text-blue-600 dark:text-blue-400"
-										: "text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400"
+								key={item.path}
+								to={item.path}
+								className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+									location.pathname === item.path
+										? "bg-primary/10 text-primary"
+										: "text-foreground/70 hover:text-foreground hover:bg-accent"
 								}`}
 							>
-								{t(game.nameKey)}
+								{t(item.nameKey)}
 							</Link>
 						))}
 					</nav>
-					<div className="flex items-center gap-3">
+					<div className="flex items-center gap-2">
 						<ThemeToggle />
 						<LanguageSwitcher />
 						{user ? (
 							<>
 								<Link to="/profile">
-									<Button variant="outline" size="sm" className="flex items-center gap-2">
+									<Button variant="ghost" size="sm" className="gap-2">
 										<User className="h-4 w-4" />
-										Profile
+										<span className="hidden xl:inline">Profile</span>
 									</Button>
 								</Link>
 								<Button
-									variant="outline"
+									variant="ghost"
 									size="sm"
 									onClick={signOut}
-									className="flex items-center gap-2"
+									className="gap-2"
 								>
 									<LogOut className="h-4 w-4" />
-									Logout
+									<span className="hidden xl:inline">Logout</span>
 								</Button>
 							</>
 						) : (
 							<Link to="/auth">
-								<Button variant="outline" size="sm" className="flex items-center gap-2">
+								<Button size="sm" className="gap-2">
 									<User className="h-4 w-4" />
 									Login
 								</Button>
@@ -88,63 +90,48 @@ const Navbar = () => {
 				</div>
 
 				{/* Mobile Menu Button */}
-				<div className="md:hidden flex items-center gap-2">
+				<div className="lg:hidden flex items-center gap-2">
 					<ThemeToggle />
 					<LanguageSwitcher />
-					<button
+					<Button
+						variant="ghost"
+						size="icon"
 						onClick={toggleMenu}
-						className="focus:outline-none focus:ring-2 focus:ring-accent text-gray-900 dark:text-gray-100"
+						className="relative"
 						aria-label="Toggle menu"
 					>
-						<svg
-							className="w-6 h-6"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							{isMobileMenuOpen ? (
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							) : (
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth="2"
-									d="M4 6h16M4 12h16M4 18h16"
-								/>
-							)}
-						</svg>
-					</button>
+						{isMobileMenuOpen ? (
+							<X className="h-5 w-5 transition-transform duration-200" />
+						) : (
+							<Menu className="h-5 w-5 transition-transform duration-200" />
+						)}
+					</Button>
 				</div>
 			</div>
 
 			{/* Mobile Menu */}
 			{isMobileMenuOpen && (
-				<div className="md:hidden bg-white dark:bg-gray-900 backdrop-blur border-t px-6 pb-4">
-					<nav className="flex flex-col space-y-4">
-						{navItems.map((game) => (
+				<div className="lg:hidden bg-background/95 backdrop-blur-md border-t border-border animate-fade-in">
+					<nav className="container mx-auto px-4 py-4 flex flex-col space-y-1">
+						{navItems.map((item) => (
 							<Link
-								key={game.path}
-								to={game.path}
+								key={item.path}
+								to={item.path}
 								onClick={closeMenu}
-								className={`font-semibold transition-colors duration-200 ${
-									location.pathname === game.path
-										? "text-blue-600 dark:text-blue-400"
-										: "text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400"
+								className={`px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+									location.pathname === item.path
+										? "bg-primary/10 text-primary"
+										: "text-foreground/70 hover:text-foreground hover:bg-accent"
 								}`}
 							>
-								{t(game.nameKey)}
+								{t(item.nameKey)}
 							</Link>
 						))}
-						<div className="pt-4 border-t">
+						<div className="pt-4 mt-4 border-t border-border space-y-2">
 							{user ? (
 								<>
-									<Link to="/profile" onClick={closeMenu} className="block mb-2">
-										<Button variant="outline" size="sm" className="w-full flex items-center justify-center gap-2">
+									<Link to="/profile" onClick={closeMenu} className="block">
+										<Button variant="outline" size="sm" className="w-full justify-start gap-2">
 											<User className="h-4 w-4" />
 											Profile
 										</Button>
@@ -156,7 +143,7 @@ const Navbar = () => {
 											signOut();
 											closeMenu();
 										}}
-										className="w-full flex items-center justify-center gap-2"
+										className="w-full justify-start gap-2"
 									>
 										<LogOut className="h-4 w-4" />
 										Logout
@@ -164,7 +151,7 @@ const Navbar = () => {
 								</>
 							) : (
 								<Link to="/auth" onClick={closeMenu}>
-									<Button variant="outline" size="sm" className="w-full flex items-center justify-center gap-2">
+									<Button size="sm" className="w-full justify-start gap-2">
 										<User className="h-4 w-4" />
 										Login
 									</Button>
