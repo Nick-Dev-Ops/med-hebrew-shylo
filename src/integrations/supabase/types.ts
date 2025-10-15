@@ -137,6 +137,42 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          description: string | null
+          full_name: string | null
+          hospital: string | null
+          how_found_us: string | null
+          id: string
+          medical_field: string | null
+          specialization: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          full_name?: string | null
+          hospital?: string | null
+          how_found_us?: string | null
+          id: string
+          medical_field?: string | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          full_name?: string | null
+          hospital?: string | null
+          how_found_us?: string | null
+          id?: string
+          medical_field?: string | null
+          specialization?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      "profiles_duplicate-backup": {
+        Row: {
+          created_at: string
           display_name: string | null
           id: string
           updated_at: string
