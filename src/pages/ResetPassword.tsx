@@ -60,9 +60,8 @@ const ResetPassword = () => {
         description: "Your password has been updated successfully.",
       });
 
-      // Sign out and redirect to login
-      await supabase.auth.signOut();
-      navigate("/auth");
+      // Redirect to main page
+      navigate("/");
     } catch (err: any) {
       setError(err?.message || "Failed to reset password");
     } finally {
