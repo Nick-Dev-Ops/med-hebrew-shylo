@@ -289,6 +289,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_progress: {
+        Row: {
+          attempts: number
+          correct: number
+          last_seen: string
+          user_id: string
+          word_id: number
+        }
+        Insert: {
+          attempts?: number
+          correct?: number
+          last_seen?: string
+          user_id: string
+          word_id: number
+        }
+        Update: {
+          attempts?: number
+          correct?: number
+          last_seen?: string
+          user_id?: string
+          word_id?: number
+        }
+        Relationships: []
+      }
       word_sentences: {
         Row: {
           created_at: string
