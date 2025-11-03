@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchHebrewSentence } from "/Users/cyber.exe/Projects/med-hebrew/med-hebrew-shylo/src/utils/fetchHebrewSentence.ts"
+import { fetchHebrewSentence } from "@/utils/fetchHebrewSentence";
 import { supabase } from "@/integrations/supabase/client";
 // Mock supabase.functions.invoke
 vi.mock("@/integrations/supabase/client", () => ({

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getBodyOrgansWords, getCategories } from '/Users/cyber.exe/Projects/med-hebrew/med-hebrew-shylo/src/cache/medicalTermsCache.tsx';
+import { getBodyOrgansWords, getCategories } from '../cache/medicalTermsCache';
 import { supabase } from '@/integrations/supabase/client';
 import { openDB } from 'idb';
 
