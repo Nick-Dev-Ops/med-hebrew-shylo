@@ -1,44 +1,28 @@
-import { useState, useCallback } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getUserMasteredWords, 
-  addUserMasteredWord, 
-  removeUserMasteredWord, 
-  clearUserMasteredWordsCache 
-} from "@/cache/medicalTermsCache";
+import { useMasteredWords } from "@/hooks/queries/useMasteredWords";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const useLearningProgress = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [masteredWords, setMasteredWords] = useState<Set<string>>(new Set());
-  const LANGUAGE_PREFERENCE_KEY = "ru";
+  const { 
+    masteredWords, 
+    isLoading, 
+    addMasteredWord: addWord, 
+    removeMasteredWord: removeWord 
+  } = useMasteredWords();
 
   const createWordKey = (category: string, word_en: string) => {
     return `${category}_${word_en}`;
   };
 
   const loadMasteredWords = useCallback(async (): Promise<Set<string>> => {
-    if (!user) return new Set();
-    
-    setLoading(true);
-    try {
-      const masteredWordsSet = await getUserMasteredWords(user.id);
-      setMasteredWords(masteredWordsSet);
-      return masteredWordsSet;
-    } catch (error: any) {
-      console.error('Error loading mastered words:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load your progress.",
-      });
-      return new Set();
-    } finally {
-      setLoading(false);
-    }
-  }, [user, toast]);
+    // With TanStack Query, data is automatically loaded
+    // This function now just returns the current state
+    return masteredWords;
+  }, [masteredWords]);
 
   const addMasteredWord = useCallback(async (category: string, word_en: string) => {
     if (!user) return;
@@ -46,8 +30,7 @@ export const useLearningProgress = () => {
     const wordKey = createWordKey(category, word_en);
     
     try {
-      await addUserMasteredWord(user.id, wordKey);
-      setMasteredWords(prev => new Set([...prev, wordKey]));
+      addWord(wordKey);
     } catch (error: any) {
       console.error('Error adding mastered word:', error);
       toast({
@@ -56,7 +39,7 @@ export const useLearningProgress = () => {
         description: "Failed to save your progress.",
       });
     }
-  }, [user, toast]);
+  }, [user, toast, addWord]);
 
   const removeMasteredWord = useCallback(async (category: string, word_en: string) => {
     if (!user) return;
@@ -64,12 +47,7 @@ export const useLearningProgress = () => {
     const wordKey = createWordKey(category, word_en);
     
     try {
-      await removeUserMasteredWord(user.id, wordKey);
-      setMasteredWords(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(wordKey);
-        return newSet;
-      });
+      removeWord(wordKey);
     } catch (error: any) {
       console.error('Error removing mastered word:', error);
       toast({
@@ -78,7 +56,7 @@ export const useLearningProgress = () => {
         description: "Failed to update your progress.",
       });
     }
-  }, [user, toast]);
+  }, [user, toast, removeWord]);
 
   const isWordMastered = useCallback((category: string, word_en: string): boolean => {
     const wordKey = createWordKey(category, word_en);
@@ -89,8 +67,13 @@ export const useLearningProgress = () => {
     if (!user) return;
 
     try {
-      await clearUserMasteredWordsCache(user.id);
-      setMasteredWords(new Set());
+      // Delete all mastered words from Supabase
+      const { error } = await supabase
+        .from('user_mastered_words')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
       
       toast({
         title: "Progress Reset",
@@ -123,7 +106,7 @@ export const useLearningProgress = () => {
     resetProgress,
     getMasteredWordsCount,
     masteredWords,
-    loading
+    loading: isLoading
   };
 };
 

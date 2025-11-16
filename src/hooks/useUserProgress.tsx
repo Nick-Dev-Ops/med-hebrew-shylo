@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProgressQuery } from "@/hooks/queries/useUserProgressQuery";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export type WordProgress = {
   word_id: number;
@@ -13,32 +14,18 @@ export type WordProgress = {
 export const useUserProgress = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { 
+    progress, 
+    isLoading, 
+    updateWordProgress: updateProgress, 
+    resetProgress: resetProgressMutation 
+  } = useUserProgressQuery();
 
   const loadUserProgress = useCallback(async (): Promise<WordProgress[]> => {
-    if (!user) return [];
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error: any) {
-      console.error('Error loading user progress:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load your progress.",
-      });
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [user, toast]);
+    // With TanStack Query, data is automatically loaded
+    // This function now just returns the current state
+    return progress;
+  }, [progress]);
 
   const updateWordProgress = useCallback(async (
     wordId: number, 
@@ -47,43 +34,7 @@ export const useUserProgress = () => {
     if (!user) return;
 
     try {
-      // First, try to get existing progress
-      const { data: existing, error: fetchError } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('word_id', wordId)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
-      if (existing) {
-        // Update existing progress
-        const { error: updateError } = await supabase
-          .from('user_progress')
-          .update({
-            correct: isCorrect ? existing.correct + 1 : existing.correct,
-            attempts: existing.attempts + 1,
-            last_seen: new Date().toISOString(),
-          })
-          .eq('user_id', user.id)
-          .eq('word_id', wordId);
-
-        if (updateError) throw updateError;
-      } else {
-        // Insert new progress
-        const { error: insertError } = await supabase
-          .from('user_progress')
-          .insert({
-            user_id: user.id,
-            word_id: wordId,
-            correct: isCorrect ? 1 : 0,
-            attempts: 1,
-            last_seen: new Date().toISOString(),
-          });
-
-        if (insertError) throw insertError;
-      }
+      updateProgress({ wordId, isCorrect });
     } catch (error: any) {
       console.error('Error updating word progress:', error);
       toast({
@@ -92,7 +43,7 @@ export const useUserProgress = () => {
         description: "Failed to save your progress.",
       });
     }
-  }, [user, toast]);
+  }, [user, toast, updateProgress]);
 
   const getCategoryProgress = useCallback(async (
     categoryId: number,
@@ -101,13 +52,6 @@ export const useUserProgress = () => {
     if (!user || totalWords === 0) return 0;
 
     try {
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('word_id, correct, attempts')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
       // Get words in this category
       const { data: categoryWords, error: wordsError } = await supabase
         .from('words')
@@ -118,29 +62,24 @@ export const useUserProgress = () => {
 
       const categoryWordIds = new Set(categoryWords?.map(w => w.id) || []);
       
-      // Count words with at least one correct answer
-      const masteredWords = data?.filter(
+      // Count words with at least one correct answer from current progress
+      const masteredWords = progress.filter(
         p => categoryWordIds.has(p.word_id) && p.correct > 0
-      ).length || 0;
+      ).length;
 
       return Math.round((masteredWords / totalWords) * 100);
     } catch (error: any) {
       console.error('Error calculating category progress:', error);
       return 0;
     }
-  }, [user]);
+  }, [user, progress]);
 
   const resetProgress = useCallback(async () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('user_progress')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
+      resetProgressMutation();
+      
       toast({
         title: "Progress Reset",
         description: "Your learning progress has been reset.",
@@ -153,13 +92,13 @@ export const useUserProgress = () => {
         description: "Failed to reset progress.",
       });
     }
-  }, [user, toast]);
+  }, [user, toast, resetProgressMutation]);
 
   return {
     loadUserProgress,
     updateWordProgress,
     getCategoryProgress,
     resetProgress,
-    loading,
+    loading: isLoading,
   };
 };

@@ -238,6 +238,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_mastered_words: {
+        Row: {
+          mastered_at: string
+          user_id: string
+          word_key: string
+        }
+        Insert: {
+          mastered_at?: string
+          user_id: string
+          word_key: string
+        }
+        Update: {
+          mastered_at?: string
+          user_id?: string
+          word_key?: string
+        }
+        Relationships: []
+      }
       user_progress: {
         Row: {
           attempts: number
