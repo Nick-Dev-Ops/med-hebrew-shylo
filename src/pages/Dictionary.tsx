@@ -1,15 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useCategories } from "@/hooks/queries/useCategories";
-import { Star, StarOff } from "lucide-react";
 import Fuse from "fuse.js";
 import { useTranslation } from "react-i18next";
-import { PageContainer, PageHeader } from "@/components/common";
+import { PageContainer } from "@/components/common";
 
 type Category = {
   id: number;
@@ -23,8 +21,7 @@ type Word = {
   en: string;
   he: string;
   rus: string;
-  // category_id might be a number or array of numbers depending on your data shape
-  category_id?: number | number[]; 
+  category_id?: number | number[];
   category?: Category | null;
 };
 
@@ -32,76 +29,72 @@ const Dictionary = () => {
   const { t, i18n } = useTranslation();
   const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
-  
-  const [filteredWords, setFilteredWords] = useState<Word[]>([]);
+
+  const [rawWords, setRawWords] = useState<Word[]>([]);       // <— Original words (never filtered)
+  const [filteredWords, setFilteredWords] = useState<Word[]>([]); // <— Filtered output
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  
+
   const loading = wordsLoading || categoriesLoading;
 
+  // -------------------------------------
+  // 1) Build RAW words list (stable base)
+  // -------------------------------------
   useEffect(() => {
     if (!allWords.length || !allCategories.length) return;
 
-    // Filter out the "Фразы для пациентов" category
-    const filteredCategories = allCategories.filter(
+    const validCategories = allCategories.filter(
       (cat) => cat.name_ru !== "Фразы для пациентов"
     );
-    setCategories(filteredCategories);
+    setCategories(validCategories);
 
-    const mappedWords = allWords
-    // 🛑 First, filter out any words with category_id 5
-    .filter((w) => {
-      const categoryIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-      return !categoryIds.includes(5);
-    })
-    // ✅ Then map to include category object
-    .map((w) => {
-      const wordCategoryIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-      const matchedCategory =
-        wordCategoryIds.length === 0 || wordCategoryIds[0] == null
-          ? null
-          : filteredCategories.find((c) => wordCategoryIds.includes(c.id)) ?? null;
+    const mapped = allWords
+      .filter((w) => {
+        const catIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
+        return !catIds.includes(5);
+      })
+      .map((w) => {
+        const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
+        const matchedCategory =
+          ids.length === 0 || ids[0] == null
+            ? null
+            : validCategories.find((c) => ids.includes(c.id)) ?? null;
 
-      return {
-        ...w,
-        category: matchedCategory,
-      };
-    });
+        return { ...w, category: matchedCategory };
+      })
+      .sort((a, b) => {
+        const aId = a.category?.id ?? 999999;
+        const bId = b.category?.id ?? 999999;
+        return aId - bId;
+      });
 
-    // Sort words by category id (or put uncategorized at the end)
-    const sortedWords = mappedWords.sort((a, b) => {
-      const aId = a.category?.id ?? Number.MAX_SAFE_INTEGER;
-      const bId = b.category?.id ?? Number.MAX_SAFE_INTEGER;
-      return aId - bId;
-    });
-
-    setFilteredWords(sortedWords);
+    setRawWords(mapped);
+    setFilteredWords(mapped);   // initialize view
   }, [allWords, allCategories]);
 
-  // Filter words by category and search query
+  // -------------------------------------
+  // 2) Apply Filters to rawWords
+  // -------------------------------------
   useEffect(() => {
-    if (!filteredWords.length) {
+    if (!rawWords.length) {
+      setFilteredWords([]);
       return;
     }
 
-    let filtered = [...filteredWords];
+    let filtered = [...rawWords];
 
-    // if (selectedCategory) {
-    //   filtered = filtered.filter(
-    //     (w) => w.category?.id.toString() === selectedCategory
-    //   );
-    // }
+    // Category filtering
     if (selectedCategory) {
-  filtered = filtered.filter((w) => {
-    if (Array.isArray(w.category_id)) {
-      return w.category_id.map(String).includes(selectedCategory);
+      filtered = filtered.filter((w) => {
+        if (Array.isArray(w.category_id)) {
+          return w.category_id.map(String).includes(selectedCategory);
+        }
+        return w.category_id?.toString() === selectedCategory;
+      });
     }
-    return w.category_id?.toString() === selectedCategory;
-  });
-}
 
+    // Search filtering
     if (searchQuery.trim()) {
       const fuse = new Fuse(filtered, {
         keys: ["he", "en", "rus"],
@@ -112,29 +105,7 @@ const Dictionary = () => {
     }
 
     setFilteredWords(filtered);
-  }, [selectedCategory, searchQuery]);
-
-  const toggleFavorite = (he: string) => {
-    setFavorites((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(he)) newSet.delete(he);
-      else newSet.add(he);
-      return newSet;
-    });
-  };
-
-  const exportFavorites = () => {
-    const exportList = filteredWords.filter((w) => favorites.has(w.he));
-    const blob = new Blob([JSON.stringify(exportList, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "favorites.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  }, [selectedCategory, searchQuery, rawWords]);
 
   const getCategoryLabel = (cat: Category | null) => {
     if (!cat) return "";
@@ -154,28 +125,18 @@ const Dictionary = () => {
         <title>{t("dictionary_title")}</title>
         <meta name="description" content={t("dictionary_description")} />
       </Helmet>
+
       <PageContainer maxWidth="6xl" className="py-10">
-        {/* Header */}
         <header className="text-center mb-8">
           <motion.h1
             className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
           >
             {t("dictionary_title")}
           </motion.h1>
-          <motion.p
-            className="mt-4 text-lg text-gray-600 dark:text-gray-300 max-w-xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-          >
-            {t("dictionary_description")}
-          </motion.p>
         </header>
 
-        {/* Controls */}
         <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
           <Input
             placeholder={t("search_placeholder")}
@@ -183,10 +144,11 @@ const Dictionary = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="min-w-[200px]"
           />
+
           <select
             value={selectedCategory ?? ""}
             onChange={(e) => setSelectedCategory(e.target.value || null)}
-            className="px-3 py-2 border rounded-md bg-background focus:outline-none"
+            className="px-3 py-2 border rounded-md bg-background"
           >
             <option value="">{t("all_categories")}</option>
             {categories.map((cat) => (
@@ -197,33 +159,22 @@ const Dictionary = () => {
           </select>
         </div>
 
-        {/* Word Grid */}
         {loading ? (
-          <p className="text-center text-muted-foreground mt-10">
-            {t("loading")}
-          </p>
+          <p className="text-center mt-10">{t("loading")}</p>
         ) : filteredWords.length === 0 ? (
-          <p className="text-center text-muted-foreground mt-10">
-            {t("no_words")}
-          </p>
+          <p className="text-center mt-10">{t("no_words")}</p>
         ) : (
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWords.map((word) => (
-              <motion.div
-                key={word.he}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <Card className="h-full overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow">
-                  <CardHeader className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{word.he}</CardTitle>
-                      <CardDescription>
-                        EN: {word.en} <br />
-                        RU: {word.rus} <br />
-                        {word.category && getCategoryLabel(word.category)}
-                      </CardDescription>
-                    </div>
+              <motion.div key={word.he} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle>{word.he}</CardTitle>
+                    <CardDescription>
+                      EN: {word.en} <br />
+                      RU: {word.rus} <br />
+                      {getCategoryLabel(word.category)}
+                    </CardDescription>
                   </CardHeader>
                 </Card>
               </motion.div>
@@ -236,4 +187,3 @@ const Dictionary = () => {
 };
 
 export default Dictionary;
-
