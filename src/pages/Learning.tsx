@@ -490,63 +490,6 @@ const Learning = () => {
                 </div>
               )}
 
-              <div className="flex justify-between mt-6">
-                <Button variant="outline" onClick={handleBack} disabled={currentIndex === 0}>
-                  {t("back", "Back")}
-                </Button>
-                {showNext && (
-                  <Button variant="default" onClick={handleNext}>
-                    {currentIndex + 1 < deck.length ? t("next", "Next") : t("finish", "Finish")}
-                  </Button>
-                )}
-              </div>
-
-              {showExample.visible && (
-                <div className="mt-4 animate-fade-in">
-                  <div className="relative bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6 shadow-sm">
-                    <button
-                      onClick={() => setShowExample({ visible: false, sentence: "" })}
-                      className="absolute top-3 right-3 p-1 rounded-full hover:bg-primary/10 transition-colors"
-                      aria-label="Close example"
-                    >
-                      <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                    </button>
-
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-1">
-                        <div className="p-2 rounded-full bg-primary/10">
-                          <BookOpen className="h-4 w-4 text-primary" />
-                        </div>
-                      </div>
-
-                      <div className="flex-1 space-y-2">
-                        <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                          {t("example_sentence", "Example Sentence")}
-                          {loadingExample && (
-                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                          )}
-                        </h4>
-
-                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                          {showExample.sentence}
-                        </p>
-
-                        <div className="flex gap-2 pt-2 opacity-50">
-                          <button
-                            disabled
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:cursor-not-allowed"
-                            title="Audio playback (coming soon)"
-                          >
-                            <Volume2 className="h-3 w-3" />
-                            <span>{t("play_audio", "Play Audio")}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Navigation */}
               <div className="flex justify-between mt-4">
                 <Button
