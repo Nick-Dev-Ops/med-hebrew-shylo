@@ -9,6 +9,7 @@ import { useCategories } from "@/hooks/queries/useCategories";
 import { Star, StarOff } from "lucide-react";
 import Fuse from "fuse.js";
 import { useTranslation } from "react-i18next";
+import { PageContainer, PageHeader } from "@/components/common";
 
 type Category = {
   id: number;
@@ -153,7 +154,7 @@ const Dictionary = () => {
         <title>{t("dictionary_title")}</title>
         <meta name="description" content={t("dictionary_description")} />
       </Helmet>
-      <main className="container mx-auto max-w-6xl px-4 py-10">
+      <PageContainer maxWidth="6xl" className="py-10">
         {/* Header */}
         <header className="text-center mb-8">
           <motion.h1
@@ -229,7 +230,7 @@ const Dictionary = () => {
             ))}
           </section>
         )}
-      </main>
+      </PageContainer>
     </>
   );
 };

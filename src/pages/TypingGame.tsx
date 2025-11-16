@@ -3,6 +3,7 @@ import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { PageContainer, PageHeader } from "@/components/common";
 
 type Word = {
   en: string;
@@ -103,21 +104,17 @@ const TypingGame = () => {
       </Helmet>
 
       <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-        <section className="container py-8 md:py-12">
-          <div className="max-w-2xl mx-auto">
-            {!running ? (
-              <div className="text-center">
-                <header className="text-center mb-8">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-foreground">
-                    Typing Challenge
-                  </h1>
-                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                    Test your speed and accuracy with medical terminology
-                  </p>
-                </header>
-                <div className="bg-card border rounded-2xl p-8 shadow-lg">
-                  <div className="mb-6">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <PageContainer maxWidth="2xl" padding={false} className="py-8 md:py-12">
+          {!running ? (
+            <div className="text-center">
+              <PageHeader
+                title="Typing Challenge"
+                subtitle="Test your speed and accuracy with medical terminology"
+                className="mb-8"
+              />
+              <div className="bg-card border rounded-2xl p-8 shadow-lg">
+                <div className="mb-6">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-2xl">⚡</span>
                     </div>
                     <h2 className="text-2xl font-semibold mb-2">Ready to Start?</h2>
@@ -222,9 +219,8 @@ const TypingGame = () => {
                 )}
               </div>
             )}
-          </div>
-        </section>
-      </main>
+          </PageContainer>
+        </main>
 
       {/* Toast Popup - middle bottom */}
       {toastMsg && (
