@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
-import { getMedicalTermsWithCategories, getCategories } from "@/cache/medicalTermsCache";
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
+import { useCategories } from "@/hooks/queries/useCategories";
 import { useTranslation } from "react-i18next";
 
 type Word = { en: string; he: string; rus: string; category?: string | null };
@@ -29,6 +30,9 @@ function getRandomDistractors(words: Word[], correct: Word, lang: Lang, count: n
 
 const Quiz = () => {
   const { t, i18n } = useTranslation();
+  const { data: allMedicalTerms = [], isLoading: wordsLoading } = useMedicalTerms();
+  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
+  
     // Helper to normalize i18n.language to your Lang type
   const normalizeLang = (lang: string): Lang => {
     if (lang.startsWith("ru") || lang === "rus") return "rus";
@@ -48,27 +52,29 @@ const Quiz = () => {
   const targetLang = normalizeLang(i18n.language);
 
   useEffect(() => {
-    const fetchWords = async () => {
-      const allWords = await getMedicalTermsWithCategories();
-      const allCategories = await getCategories();
-      setCategories(allCategories);
+    if (!allMedicalTerms.length) return;
 
-      let filtered = allWords;
-      if (selectedCategory) {
-        filtered = allWords.filter((w: any) => {
-          const categoryIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-          return categoryIds.includes(Number(selectedCategory));
-        });
-      }
+    setCategories(allCategories);
 
-      const cleaned = filtered.filter((w: Word) => w.he && w[targetLang]);
-      setWords(shuffleCopy(cleaned));
-      setCurrentIndex(0);
-      setScore(0);
-      setSelected(null);
-    };
-    fetchWords();
-  }, [selectedCategory, targetLang]);
+    let filtered = allMedicalTerms;
+    if (selectedCategory) {
+      filtered = allMedicalTerms.filter((w) => {
+        const categoryIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
+        return categoryIds.includes(Number(selectedCategory));
+      });
+    }
+
+    const cleaned = filtered.filter((w) => w.he && w[targetLang]).map(w => ({
+      en: w.en,
+      he: w.he,
+      rus: w.rus,
+      category: w.category?.name_en || null
+    }));
+    setWords(shuffleCopy(cleaned));
+    setCurrentIndex(0);
+    setScore(0);
+    setSelected(null);
+  }, [allMedicalTerms, allCategories, selectedCategory, targetLang]);
 
   useEffect(() => {
     if (current) {

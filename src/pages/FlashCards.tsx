@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import Flashcard from "@/components/Flashcard";
-import { getMedicalTerms } from "@/cache/medicalTermsCache"; // <-- Use the cache!
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 
 type Word = { 
   en: string; 
@@ -21,9 +21,9 @@ function shuffleCopy<T>(arr: T[]): T[] {
   return a;
 }
 const FlashCards = () => {
+  const { data: allMedicalTerms = [], isLoading } = useMedicalTerms();
   const [words, setWords] = useState<Word[]>([]);
-  const [categories, setCategories] = useState<string[]>([]); // <-- dynamic categories
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState(0);
@@ -34,39 +34,33 @@ const FlashCards = () => {
   const current = words[index];
   const isDone = !current && total > 0;
 
-  // Fetch words and categories from cache
-  const fetchWords = useCallback(async (categoryFilter?: string | null) => {
-    setLoading(true);
-    const allWords = await getMedicalTerms();
+  // Process words and categories when data loads
+  useEffect(() => {
+    if (!allMedicalTerms.length) return;
 
     // Extract unique categories from cached data
     const uniqueCategories = Array.from(
-      new Set(allWords.map((w: Word) => w.category).filter(Boolean))
+      new Set(allMedicalTerms.map((w) => w.category?.name_en).filter(Boolean))
     ) as string[];
     setCategories(uniqueCategories);
 
-    let filtered = allWords;
-    if (categoryFilter) {
-      filtered = filtered.filter((w: Word) => w.category === categoryFilter);
+    let filtered = allMedicalTerms;
+    if (selectedCategory) {
+      filtered = filtered.filter((w) => w.category?.name_en === selectedCategory);
     }
 
-    const mapped = (filtered ?? []).map((w: Word) => ({
+    const mapped = shuffleCopy(filtered).map((w) => ({
       en: w.en?.trim() || "",
       he: w.he?.trim() || "",
       rus: w.rus?.trim() || "",
-      category: w.category ?? null
-    })) as Word[];
+      category: w.category?.name_en ?? null
+    }));
 
     setWords(mapped);
     setIndex(0);
+    setReviewed(0);
     setFlipped(false);
-    setLoading(false);
-  }, []);
-
-  // Refetch when category changes
-  useEffect(() => {
-    fetchWords(selectedCategory);
-  }, [fetchWords, selectedCategory]);
+  }, [allMedicalTerms, selectedCategory]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -149,7 +143,7 @@ const FlashCards = () => {
         </div>
 
         {/* Main Flashcard Display */}
-        {loading ? (
+        {isLoading ? (
           <p className="text-center text-muted-foreground">Loading words...</p>
         ) : isDone ? (
           <div className="text-center p-10 border rounded shadow-md bg-green-100 text-green-800 font-semibold text-2xl">

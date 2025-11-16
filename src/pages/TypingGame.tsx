@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getMedicalTerms } from "@/cache/medicalTermsCache"; // <-- Use the cache!
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { Button } from "@/components/ui/button";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
@@ -13,6 +13,7 @@ type Word = {
 type Mode = "EN→HE" | "RU→HE" | "HE→EN" | "HE→RU";
 
 const TypingGame = () => {
+  const { data: allMedicalTerms = [], isLoading } = useMedicalTerms();
   const [words, setWords] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [input, setInput] = useState("");
@@ -40,9 +41,13 @@ const TypingGame = () => {
     }
   }, [toastMsg]);
 
-  const fetchWords = async () => {
-    const allWords = await getMedicalTerms(); // <-- Use cached data
-    setWords(allWords.sort(() => Math.random() - 0.5));
+  const fetchWords = () => {
+    const words = allMedicalTerms.map(w => ({
+      en: w.en,
+      he: w.he,
+      rus: w.rus
+    }));
+    setWords(words.sort(() => Math.random() - 0.5));
     setCurrentIndex(0);
     setScore(0);
     setTimeLeft(60);

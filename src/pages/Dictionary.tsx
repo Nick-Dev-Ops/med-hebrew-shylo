@@ -4,7 +4,8 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { getMedicalTermsWithCategories, getCategories } from "@/cache/medicalTermsCache";
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
+import { useCategories } from "@/hooks/queries/useCategories";
 import { Star, StarOff } from "lucide-react";
 import Fuse from "fuse.js";
 import { useTranslation } from "react-i18next";
@@ -28,21 +29,19 @@ type Word = {
 
 const Dictionary = () => {
   const { t, i18n } = useTranslation();
-  const [words, setWords] = useState<Word[]>([]);
+  const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
+  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
+  
   const [filteredWords, setFilteredWords] = useState<Word[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  
+  const loading = wordsLoading || categoriesLoading;
 
-  const fetchWords = useCallback(async () => {
-    setLoading(true);
-
-    const [allWords, allCategories] = await Promise.all([
-      getMedicalTermsWithCategories(),
-      getCategories(),
-    ]);
+  useEffect(() => {
+    if (!allWords.length || !allCategories.length) return;
 
     // Filter out the "Фразы для пациентов" category
     const filteredCategories = allCategories.filter(
@@ -52,12 +51,12 @@ const Dictionary = () => {
 
     const mappedWords = allWords
     // 🛑 First, filter out any words with category_id 5
-    .filter((w: Word) => {
+    .filter((w) => {
       const categoryIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
       return !categoryIds.includes(5);
     })
     // ✅ Then map to include category object
-    .map((w: Word) => {
+    .map((w) => {
       const wordCategoryIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
       const matchedCategory =
         wordCategoryIds.length === 0 || wordCategoryIds[0] == null
@@ -77,22 +76,16 @@ const Dictionary = () => {
       return aId - bId;
     });
 
-    setWords(sortedWords);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchWords();
-  }, [fetchWords]);
+    setFilteredWords(sortedWords);
+  }, [allWords, allCategories]);
 
   // Filter words by category and search query
   useEffect(() => {
-    if (!words.length) {
-      setFilteredWords([]);
+    if (!filteredWords.length) {
       return;
     }
 
-    let filtered = [...words];
+    let filtered = [...filteredWords];
 
     if (selectedCategory) {
       filtered = filtered.filter(
@@ -110,7 +103,7 @@ const Dictionary = () => {
     }
 
     setFilteredWords(filtered);
-  }, [words, selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery]);
 
   const toggleFavorite = (he: string) => {
     setFavorites((prev) => {
@@ -122,7 +115,7 @@ const Dictionary = () => {
   };
 
   const exportFavorites = () => {
-    const exportList = words.filter((w) => favorites.has(w.he));
+    const exportList = filteredWords.filter((w) => favorites.has(w.he));
     const blob = new Blob([JSON.stringify(exportList, null, 2)], {
       type: "application/json",
     });

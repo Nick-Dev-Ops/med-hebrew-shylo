@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { getMedicalTerms, getMedicalTermsWithCategories } from "@/cache/medicalTermsCache";
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { Word, Card, GameState, GameStats } from "@/types/matching";
 
 const TOTAL_WORDS = 64;
@@ -24,6 +24,7 @@ const getVisibleCardCount = (width: number) => {
 export const useMatchingGame = (sourceLang: "en" | "rus", targetLang: "he" = "he") => {
   const [gameState, setGameState] = useState<GameState>("menu");
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const { data: medicalTerms = [] } = useMedicalTerms();
 
   const [wordPool, setWordPool] = useState<Word[]>([]);
   const [usedWords, setUsedWords] = useState<Set<number>>(new Set());
@@ -81,9 +82,7 @@ export const useMatchingGame = (sourceLang: "en" | "rus", targetLang: "he" = "he
 
   const loadWordPool = useCallback(async () => {
     try {
-      // const allWords = await getMedicalTerms();
-      const allWords = await getMedicalTermsWithCategories();
-      const filtered = allWords.filter((w: any) => w.rus && w.he && w.en && w.id);
+      const filtered = medicalTerms.filter((w) => w.rus && w.he && w.en && w.id);
       const shuffled = shuffleArray(filtered).slice(0, TOTAL_WORDS);
       setWordPool(shuffled);
       return shuffled;
@@ -91,7 +90,7 @@ export const useMatchingGame = (sourceLang: "en" | "rus", targetLang: "he" = "he
       console.error("Failed to load word pool:", error);
       return [];
     }
-  }, []);
+  }, [medicalTerms]);
 
   const getRandomUnusedWords = useCallback((count: number): Word[] => {
     const availableWords = wordPool.filter(word => !usedWords.has(word.id));
