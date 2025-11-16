@@ -87,11 +87,19 @@ const Dictionary = () => {
 
     let filtered = [...filteredWords];
 
+    // if (selectedCategory) {
+    //   filtered = filtered.filter(
+    //     (w) => w.category?.id.toString() === selectedCategory
+    //   );
+    // }
     if (selectedCategory) {
-      filtered = filtered.filter(
-        (w) => w.category?.id.toString() === selectedCategory
-      );
+  filtered = filtered.filter((w) => {
+    if (Array.isArray(w.category_id)) {
+      return w.category_id.map(String).includes(selectedCategory);
     }
+    return w.category_id?.toString() === selectedCategory;
+  });
+}
 
     if (searchQuery.trim()) {
       const fuse = new Fuse(filtered, {
@@ -186,9 +194,6 @@ const Dictionary = () => {
               </option>
             ))}
           </select>
-          <Button onClick={exportFavorites} disabled={favorites.size === 0}>
-            {t("export_favorites")}
-          </Button>
         </div>
 
         {/* Word Grid */}
@@ -218,17 +223,6 @@ const Dictionary = () => {
                         {word.category && getCategoryLabel(word.category)}
                       </CardDescription>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toggleFavorite(word.he)}
-                    >
-                      {favorites.has(word.he) ? (
-                        <Star className="text-yellow-400" />
-                      ) : (
-                        <StarOff />
-                      )}
-                    </Button>
                   </CardHeader>
                 </Card>
               </motion.div>

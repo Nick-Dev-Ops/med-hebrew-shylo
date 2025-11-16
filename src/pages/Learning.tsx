@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { fetchHebrewSentence } from "@/utils/fetchHebrewSentence";
+import { BookOpen, ArrowLeft, Loader2, X, Volume2, RotateCcw, Sparkles } from "lucide-react";
 import { BookOpen, ArrowLeft, Loader2, X, Volume2, RotateCcw, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUserProgress } from "@/hooks/useUserProgress";
@@ -72,7 +73,6 @@ const Learning = () => {
   // Deck handling
   const [deck, setDeck] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
   const [options, setOptions] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string>("");
   const [gameMode, setGameMode] = useState<GameMode>("categories");
@@ -83,7 +83,7 @@ const Learning = () => {
   const [loadingExample, setLoadingExample] = useState(false);
   const [showSentenceButton, setShowSentenceButton] = useState(false);
 
-  /** Load words and categories */
+  /** Load words and categories on mount */
   useEffect(() => {
     if (!allWords.length || !allCategories.length) return;
 
@@ -104,9 +104,9 @@ const Learning = () => {
     })();
   }, [allWords, allCategories, user, getCategoryProgress]);
 
-  /** Start category */
+  /** Shuffle and start a category */
   const startCategory = (category: Category) => {
-    const categoryWords = words.filter(w => w.category_id === category.id);
+    const categoryWords = words.filter((w) => w.category_id === category.id);
     if (!categoryWords.length) return;
 
     const shuffled = shuffle(categoryWords);
@@ -116,19 +116,20 @@ const Learning = () => {
     setGameMode("playing");
     setShowNext(false);
     setSelectedAnswer(null);
-    setShowExample({visible: false, sentence: ""});
+    setShowExample({ visible: false, sentence: "" });
     setLastAnswers([]);
-    setAnswersMap({}); // Reset answers map
-    setLoadingExample(false); // Reset loading state
-    setFeedback(""); // Reset feedback
+    setAnswersMap({});
+    setSessionProgress({});
+    setLoadingExample(false);
+    setFeedback("");
     prepareOptions(shuffled[0]);
   };
 
   /** Prepare answer options */
   const prepareOptions = (word: Word) => {
     const wrongAnswers = words
-      .filter(w => w.he !== word.he)
-      .map(w => w.he)
+      .filter((w) => w.he !== word.he)
+      .map((w) => w.he)
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
 
@@ -137,20 +138,18 @@ const Learning = () => {
     setShowAnswer(false);
   };
 
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [answersMap, setAnswersMap] = useState<Record<number, string>>({});
-
-  const handleAnswer = async (selected: string) => {
+  /** Handle user answer */
+  const handleAnswer = (selected: string) => {
     const currentCard = deck[currentIndex];
     if (!currentCard) return;
 
     setSelectedAnswer(selected);
-    setAnswersMap(prev => ({ ...prev, [currentIndex]: selected }));
+    setAnswersMap((prev) => ({ ...prev, [currentIndex]: selected }));
     const isCorrect = selected === currentCard.he;
     setShowAnswer(true);
-    setFeedback(isCorrect ? "✅ Correct!" : `❌ Incorrect. Correct answer: ${currentCard.he}`);
     setShowNext(true);
-    setLastAnswers(prev => [...prev, {index: currentIndex, answer: selected}]);
+    setFeedback(isCorrect ? "✅ Correct!" : `❌ Incorrect. Correct answer: ${currentCard.he}`);
+    setLastAnswers((prev) => [...prev, { index: currentIndex, answer: selected }]);
 
     // Save progress to database
     if (user && currentCard.id) {
@@ -190,6 +189,7 @@ const Learning = () => {
     setLoadingExample(false);
   };
 
+  /** Go to next card */
   const handleNext = () => {
     const nextIndex = currentIndex + 1;
     setShowAnswer(false);
@@ -202,12 +202,13 @@ const Learning = () => {
     if (nextIndex < deck.length) {
       setCurrentIndex(nextIndex);
       prepareOptions(deck[nextIndex]);
-      // Restore answer if exists
+
       if (answersMap[nextIndex] !== undefined) {
-        setSelectedAnswer(answersMap[nextIndex]);
+        const ans = answersMap[nextIndex];
+        setSelectedAnswer(ans);
         setShowAnswer(true);
         setShowNext(true);
-        const isCorrect = answersMap[nextIndex] === deck[nextIndex].he;
+        const isCorrect = ans === deck[nextIndex].he;
         setFeedback(isCorrect ? "✅ Correct!" : `❌ Incorrect. Correct answer: ${deck[nextIndex].he}`);
         if (isCorrect) {
           setShowSentenceButton(true);
@@ -218,6 +219,7 @@ const Learning = () => {
     }
   };
 
+  /** Go to previous card */
   const handleBack = () => {
     if (currentIndex > 0) {
       const prevIndex = currentIndex - 1;
@@ -352,6 +354,7 @@ const Learning = () => {
     );
   }
 
+  /** Render finished page */
   if (gameMode === "finished") {
     return (
       <>
@@ -369,13 +372,13 @@ const Learning = () => {
     );
   }
 
-  // Playing mode
+  /** Render playing mode */
   const currentCard = deck[currentIndex];
-
   return (
     <>
       <Helmet><title>Card Game - {selectedCategory?.name_en}</title></Helmet>
       <div className="container mx-auto max-w-4xl space-y-6">
+        {/* Header */}
         <header className="flex items-center justify-between">
           <Button variant="outline" onClick={backToCategories} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" /> {t("back", "Back")}
@@ -400,11 +403,14 @@ const Learning = () => {
               <CardTitle className="text-3xl font-bold">
                 {currentCard[targetLang]}
               </CardTitle>
-              <CardDescription>{t("select_hebrew", "Select the correct Hebrew translation")}</CardDescription>
+              <CardDescription>
+                {t("select_hebrew", "Select the correct Hebrew translation")}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Answer Options */}
               <div className="grid grid-cols-1 gap-3">
-                {options.map(opt => {
+                {options.map((opt) => {
                   let btnVariant = "outline";
                   let btnClass = "p-6 text-lg";
                   if (showAnswer) {
@@ -431,6 +437,7 @@ const Learning = () => {
                 })}
               </div>
 
+              {/* Feedback */}
               {feedback && (
                 <div className="p-4 rounded-lg text-center font-medium bg-muted border">
                   {feedback}
@@ -505,7 +512,73 @@ const Learning = () => {
                   <Button variant="default" onClick={handleNext}>
                     {currentIndex + 1 < deck.length ? t("next", "Next") : t("finish", "Finish")}
                   </Button>
-                )}
+                </div>
+              )}
+
+              {showExample.visible && (
+                <div className="mt-4 animate-fade-in">
+                  <div className="relative bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6 shadow-sm">
+                    <button
+                      onClick={() => setShowExample({ visible: false, sentence: "" })}
+                      className="absolute top-3 right-3 p-1 rounded-full hover:bg-primary/10 transition-colors"
+                      aria-label="Close example"
+                    >
+                      <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    </button>
+
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="p-2 rounded-full bg-primary/10">
+                          <BookOpen className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 space-y-2">
+                        <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          {t("example_sentence", "Example Sentence")}
+                          {loadingExample && (
+                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          )}
+                        </h4>
+
+                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                          {showExample.sentence}
+                        </p>
+
+                        <div className="flex gap-2 pt-2 opacity-50">
+                          <button
+                            disabled
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:cursor-not-allowed"
+                            title="Audio playback (coming soon)"
+                          >
+                            <Volume2 className="h-3 w-3" />
+                            <span>{t("play_audio", "Play Audio")}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation */}
+              <div className="flex justify-between mt-4">
+                <Button
+                  onClick={handleBack}
+                  variant="outline"
+                  disabled={currentIndex === 0}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" /> {t("previous", "Previous")}
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  variant="default"
+                  disabled={!showNext}
+                  className="flex items-center gap-2"
+                >
+                  {t("next", "Next")} <ArrowLeft className="h-4 w-4 rotate-180" />
+                </Button>
               </div>
             </CardContent>
           </Card>
