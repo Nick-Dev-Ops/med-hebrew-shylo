@@ -7,7 +7,6 @@ import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { fetchHebrewSentence } from "@/utils/fetchHebrewSentence";
 import { BookOpen, ArrowLeft, Loader2, X, Volume2, RotateCcw, Sparkles } from "lucide-react";
-import { BookOpen, ArrowLeft, Loader2, X, Volume2, RotateCcw, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUserProgress } from "@/hooks/useUserProgress";
 import { useAuth } from "@/hooks/useAuth";
@@ -82,6 +81,9 @@ const Learning = () => {
   const [showExample, setShowExample] = useState<{visible: boolean, sentence: string}>({visible: false, sentence: ""});
   const [loadingExample, setLoadingExample] = useState(false);
   const [showSentenceButton, setShowSentenceButton] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [answersMap, setAnswersMap] = useState<Record<number, string>>({});
+  const [sessionProgress, setSessionProgress] = useState<Record<number, any>>({});
 
   /** Load words and categories on mount */
   useEffect(() => {
@@ -139,7 +141,7 @@ const Learning = () => {
   };
 
   /** Handle user answer */
-  const handleAnswer = (selected: string) => {
+  const handleAnswer = async (selected: string) => {
     const currentCard = deck[currentIndex];
     if (!currentCard) return;
 
@@ -512,8 +514,8 @@ const Learning = () => {
                   <Button variant="default" onClick={handleNext}>
                     {currentIndex + 1 < deck.length ? t("next", "Next") : t("finish", "Finish")}
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
 
               {showExample.visible && (
                 <div className="mt-4 animate-fade-in">
