@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useCategories } from "@/hooks/queries/useCategories";
 import { useTranslation } from "react-i18next";
+import { LoadingState, CompletionScreen, PageContainer } from "@/components/common";
 
 type Word = {
   id: number;
@@ -159,39 +160,25 @@ const Quiz = () => {
       <main className="container mx-auto max-w-6xl">
         <section className="container py-8 md:py-12 px-4 max-w-4xl mx-auto">
           {wordsLoading || categoriesLoading ? (
-            <div className="text-center" aria-live="polite">
-              <div className="animate-pulse">
-                <div className="w-8 h-8 bg-primary/20 rounded-full mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading quiz questions...</p>
-              </div>
-            </div>
+            <LoadingState message="Loading quiz questions..." />
           ) : isDone ? (
-            <div
-              className="bg-card border border-border rounded-lg p-6 md:p-8 max-w-md mx-auto text-center shadow-lg"
-              role="alert"
-              aria-live="polite"
-            >
-              <div className="text-4xl mb-4" aria-hidden="true">
-                🏁
-              </div>
-              <h2 className="text-xl md:text-2xl font-bold text-foreground mb-4">
-                Quiz Complete!
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                You scored <span className="font-semibold text-foreground">{score}</span> out of{" "}
-                <span className="font-semibold text-foreground">{words.length}</span> correct
-                <span className="sr-only">
-                  . That's{" "}
-                  {words.length ? Math.round((score / words.length) * 100) : 0}% accuracy.
-                </span>
-              </p>
-              <Button onClick={restartQuiz} className="min-w-[120px]" aria-describedby="restart-help">
-                Restart Quiz
-              </Button>
-              <span id="restart-help" className="sr-only">
-                Start the quiz over with the same settings
-              </span>
-            </div>
+            <CompletionScreen
+              emoji="🏁"
+              title="Quiz Complete!"
+              description={
+                <>
+                  You scored <span className="font-semibold text-foreground">{score}</span> out of{" "}
+                  <span className="font-semibold text-foreground">{words.length}</span> correct
+                  <span className="sr-only">
+                    . That's{" "}
+                    {words.length ? Math.round((score / words.length) * 100) : 0}% accuracy.
+                  </span>
+                </>
+              }
+              onAction={restartQuiz}
+              actionLabel="Restart Quiz"
+              className="bg-card border border-border rounded-lg p-6 md:p-8 shadow-lg"
+            />
           ) : current ? (
             <div className="max-w-2xl mx-auto">
               <div className="text-center mb-8">

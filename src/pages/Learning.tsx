@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { PageContainer, PageHeader, CompletionScreen, CategoryCard } from "@/components/common";
 
 type Word = {
   id: number;
@@ -283,11 +284,12 @@ const Learning = () => {
     return (
       <>
         <Helmet><title>Card Game</title></Helmet>
-        <div className="container mx-auto max-w-6xl space-y-8">
-          <header className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-4">
-              <h1 className="text-4xl font-bold">{t("learning_header", "Card Game")}</h1>
-              {user && (
+        <PageContainer maxWidth="6xl" className="space-y-8">
+          <PageHeader
+            title={t("learning_header", "Card Game")}
+            subtitle={t("learning_subtitle", "Pick a category and test your knowledge.")}
+            actions={
+              user && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="icon" title="Reset Progress">
@@ -309,49 +311,33 @@ const Learning = () => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              )}
-            </div>
-            <p className="text-xl text-muted-foreground">{t("learning_subtitle", "Pick a category and test your knowledge.")}</p>
-          </header>
+              )
+            }
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map(cat => {
               const categoryWords = words.filter(w => w.category_id === cat.id);
               const progress = categoryProgress[cat.id] || 0;
+              const categoryName = i18n.language === "he"
+                ? cat.name_he
+                : i18n.language.startsWith("ru")
+                ? cat.name_ru
+                : cat.name_en;
               
               return (
-                <Card
+                <CategoryCard
                   key={cat.id}
+                  title={categoryName}
+                  description={`${categoryWords.length} ${t("terms", "terms")}`}
+                  progress={progress}
+                  icon={BookOpen}
                   onClick={() => startCategory(cat)}
-                  className="cursor-pointer transition-all hover:shadow-elegant hover:border-primary/50"
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <BookOpen className="h-5 w-5" />
-                      {i18n.language === "he"
-                        ? cat.name_he
-                        : i18n.language.startsWith("ru")
-                        ? cat.name_ru
-                        : cat.name_en}
-                    </CardTitle>
-                    <CardDescription>
-                      {categoryWords.length} {t("terms", "terms")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-medium">{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                    </div>
-                  </CardContent>
-                </Card>
+                />
               );
             })}
           </div>
-        </div>
+        </PageContainer>
       </>
     );
   }
@@ -361,15 +347,13 @@ const Learning = () => {
     return (
       <>
         <Helmet><title>Card Game - Finished</title></Helmet>
-        <div className="container mx-auto max-w-2xl text-center space-y-6 py-12">
-          <h1 className="text-3xl font-bold">🎉 {t("finished", "All done!")}</h1>
-          <p className="text-lg text-muted-foreground">
-            {t("you_completed", "You have completed all words in this category.")}
-          </p>
-          <Button onClick={backToCategories} className="mt-4">
-            {t("back_to_categories", "Back to Categories")}
-          </Button>
-        </div>
+        <CompletionScreen
+          emoji="🎉"
+          title={t("finished", "All done!")}
+          description={t("you_completed", "You have completed all words in this category.")}
+          onAction={backToCategories}
+          actionLabel={t("back_to_categories", "Back to Categories")}
+        />
       </>
     );
   }
