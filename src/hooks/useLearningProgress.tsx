@@ -2,10 +2,10 @@ import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useMasteredWords } from "@/hooks/queries/useMasteredWords";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/context/AuthContext";
 
 export const useLearningProgress = () => {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { toast } = useToast();
   const { 
     masteredWords, 
