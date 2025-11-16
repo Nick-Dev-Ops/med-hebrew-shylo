@@ -154,9 +154,19 @@ const Learning = () => {
     setFeedback(isCorrect ? "✅ Correct!" : `❌ Incorrect. Correct answer: ${currentCard.he}`);
     setLastAnswers((prev) => [...prev, { index: currentIndex, answer: selected }]);
 
-    // Save progress to database
+    // Save progress to database and update local state
     if (user && currentCard.id) {
       await updateWordProgress(currentCard.id, isCorrect);
+
+      // Update session progress locally
+      setSessionProgress((prev) => ({
+        ...prev,
+        [currentCard.id]: {
+          correct: isCorrect ? (prev[currentCard.id]?.correct || 0) + 1 : prev[currentCard.id]?.correct || 0,
+          attempts: (prev[currentCard.id]?.attempts || 0) + 1,
+          last_seen: new Date().toISOString(),
+        },
+      }));
     }
 
     // Show button to get example sentence if correct
