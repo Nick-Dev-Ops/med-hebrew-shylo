@@ -55,7 +55,7 @@ function shuffle<T>(arr: T[]): T[] {
 const Learning = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuthContext();
-  const { updateWordProgress, getCategoryProgress, resetProgress } = useUserProgress();
+  const { updateWordProgress, getAllCategoryProgress, resetProgress } = useUserProgress();
   const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
 
@@ -93,19 +93,19 @@ const Learning = () => {
     setWords(allWords);
     setCategories(allCategories);
 
-    // Load progress for each category
+    // Load progress for all categories in a single request
     (async () => {
       if (user) {
-        const progressMap: Record<number, number> = {};
-        for (const cat of allCategories) {
-          const categoryWords = allWords.filter(w => w.category_id === cat.id);
-          const progress = await getCategoryProgress(cat.id, categoryWords.length);
-          progressMap[cat.id] = progress;
-        }
+        const categoriesWithWordCount = allCategories.map((cat) => {
+          const totalWords = allWords.filter((w) => w.category_id === cat.id).length;
+          return { id: cat.id, totalWords };
+        });
+
+        const progressMap = await getAllCategoryProgress(categoriesWithWordCount);
         setCategoryProgress(progressMap);
       }
     })();
-  }, [allWords, allCategories, user, getCategoryProgress]);
+  }, [allWords, allCategories, user, getAllCategoryProgress]);
 
   /** Shuffle and start a category */
   const startCategory = (category: Category) => {
@@ -250,16 +250,15 @@ const Learning = () => {
       }
     }
   };
-
   const handleResetProgress = async () => {
     await resetProgress();
-    // Reload progress for all categories
-    const progressMap: Record<number, number> = {};
-    for (const cat of categories) {
-      const categoryWords = words.filter(w => w.category_id === cat.id);
-      const progress = await getCategoryProgress(cat.id, categoryWords.length);
-      progressMap[cat.id] = progress;
-    }
+
+    const categoriesWithWordCount = allCategories.map((cat) => {
+      const totalWords = allWords.filter((w) => w.category_id === cat.id).length;
+      return { id: cat.id, totalWords };
+    });
+
+    const progressMap = await getAllCategoryProgress(categoriesWithWordCount);
     setCategoryProgress(progressMap);
   };
 

@@ -22,8 +22,6 @@ export const useUserProgress = () => {
   } = useUserProgressQuery();
 
   const loadUserProgress = useCallback(async (): Promise<WordProgress[]> => {
-    // With TanStack Query, data is automatically loaded
-    // This function now just returns the current state
     return progress;
   }, [progress]);
 
@@ -45,32 +43,39 @@ export const useUserProgress = () => {
     }
   }, [user, toast, updateProgress]);
 
-  const getCategoryProgress = useCallback(async (
-    categoryId: number,
-    totalWords: number
-  ): Promise<number> => {
-    if (!user || totalWords === 0) return 0;
+  const getAllCategoryProgress = useCallback(async (
+    categories: { id: number; totalWords: number }[]
+  ): Promise<Record<number, number>> => {
+    if (!user) return {};
 
     try {
-      // Get words in this category
-      const { data: categoryWords, error: wordsError } = await supabase
+      const { data: allWords, error } = await supabase
         .from('words')
-        .select('id')
-        .eq('category_id', categoryId);
+        .select('id, category_id');
 
-      if (wordsError) throw wordsError;
+      if (error) throw error;
 
-      const categoryWordIds = new Set(categoryWords?.map(w => w.id) || []);
-      
-      // Count words with at least one correct answer from current progress
-      const masteredWords = progress.filter(
-        p => categoryWordIds.has(p.word_id) && p.correct > 0
-      ).length;
+      const categoryWordMap = allWords.reduce((acc, word) => {
+        if (!acc[word.category_id]) acc[word.category_id] = [];
+        acc[word.category_id].push(word.id);
+        return acc;
+      }, {} as Record<number, number[]>);
 
-      return Math.round((masteredWords / totalWords) * 100);
+      const progressMap: Record<number, number> = {};
+
+      categories.forEach(({ id, totalWords }) => {
+        const categoryWordIds = new Set(categoryWordMap[id] || []);
+        const masteredWords = progress.filter(
+          (p) => categoryWordIds.has(p.word_id) && p.correct > 0
+        ).length;
+
+        progressMap[id] = Math.round((masteredWords / totalWords) * 100);
+      });
+
+      return progressMap;
     } catch (error: any) {
       console.error('Error calculating category progress:', error);
-      return 0;
+      return {};
     }
   }, [user, progress]);
 
@@ -79,7 +84,6 @@ export const useUserProgress = () => {
 
     try {
       resetProgressMutation();
-      
       toast({
         title: "Progress Reset",
         description: "Your learning progress has been reset.",
@@ -97,7 +101,7 @@ export const useUserProgress = () => {
   return {
     loadUserProgress,
     updateWordProgress,
-    getCategoryProgress,
+    getAllCategoryProgress,
     resetProgress,
     loading: isLoading,
   };
