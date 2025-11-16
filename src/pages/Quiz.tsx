@@ -55,6 +55,7 @@ const Quiz = () => {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [words, setWords] = useState<Word[]>([]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -77,10 +78,12 @@ const Quiz = () => {
     }
 
     const cleaned = filtered.filter((w) => w.he && w[targetLang]).map(w => ({
+      id: w.id,
       en: w.en,
       he: w.he,
       rus: w.rus,
-      category: w.category?.name_en || null
+      category_id: w.category_id,
+      category_slug: w.category?.slug || null
     }));
     setWords(shuffleCopy(cleaned));
     setCurrentIndex(0);
@@ -88,7 +91,7 @@ const Quiz = () => {
     setSelected(null);
   }, [allMedicalTerms, allCategories, selectedCategory, targetLang]);
 
-  const current = filteredWords[currentIndex];
+  const current = words[currentIndex];
 
   // recompute options when question or language changes
   useEffect(() => {
@@ -96,12 +99,12 @@ const Quiz = () => {
       setOptions([]);
       return;
     }
-    const distractors = getRandomDistractors(filteredWords, current, targetLang, 3);
+    const distractors = getRandomDistractors(words, current, targetLang, 3);
     const opts = shuffleCopy([current[targetLang], ...distractors.map((w) => w[targetLang])]);
     setOptions(opts);
-  }, [current, targetLang, filteredWords]);
+  }, [current, targetLang, words]);
 
-  const isDone = currentIndex >= filteredWords.length;
+  const isDone = currentIndex >= words.length;
 
   const handleSelect = (choice: string) => {
     if (selected || !current) return;
@@ -155,7 +158,7 @@ const Quiz = () => {
       </Helmet>
       <main className="container mx-auto max-w-6xl">
         <section className="container py-8 md:py-12 px-4 max-w-4xl mx-auto">
-          {loading ? (
+          {wordsLoading || categoriesLoading ? (
             <div className="text-center" aria-live="polite">
               <div className="animate-pulse">
                 <div className="w-8 h-8 bg-primary/20 rounded-full mx-auto mb-4"></div>
@@ -176,10 +179,10 @@ const Quiz = () => {
               </h2>
               <p className="text-muted-foreground mb-6">
                 You scored <span className="font-semibold text-foreground">{score}</span> out of{" "}
-                <span className="font-semibold text-foreground">{filteredWords.length}</span> correct
+                <span className="font-semibold text-foreground">{words.length}</span> correct
                 <span className="sr-only">
                   . That's{" "}
-                  {filteredWords.length ? Math.round((score / filteredWords.length) * 100) : 0}% accuracy.
+                  {words.length ? Math.round((score / words.length) * 100) : 0}% accuracy.
                 </span>
               </p>
               <Button onClick={restartQuiz} className="min-w-[120px]" aria-describedby="restart-help">
@@ -324,13 +327,13 @@ const Quiz = () => {
               <div className="mt-8 text-center">
                 <p className="text-sm text-muted-foreground" aria-live="polite">
                   {t("quiz_counter")} <span className="font-medium">{currentIndex + 1}</span> {t("of")}{" "}
-                  <span className="font-medium">{filteredWords.length}</span>
+                  <span className="font-medium">{words.length}</span>
                 </p>
               </div>
             </div>
           ) : (
             <div className="text-center" aria-live="polite">
-              {filteredWords.length === 0 ? (
+              {words.length === 0 ? (
                 <div className="max-w-md mx-auto">
                   <p className="text-muted-foreground">
                     {t("No words found for this category. Try another one or show all.")}
