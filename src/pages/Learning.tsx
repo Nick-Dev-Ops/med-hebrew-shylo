@@ -430,6 +430,19 @@ const Learning = () => {
                 </div>
               )}
 
+              {showSentenceButton && (
+                <div className="flex justify-center">
+                  <Button
+                    onClick={handleGetSentence}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {t("get_example_sentence", "Get AI Example Sentence")}
+                  </Button>
+                </div>
+              )}
+
               {showExample.visible && (
                 <div className="mt-4 animate-fade-in">
                   <div className="relative bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6 shadow-sm">
