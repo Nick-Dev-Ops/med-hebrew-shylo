@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProgressQuery } from "@/hooks/queries/useUserProgressQuery";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/context/AuthContext";
 
 export type WordProgress = {
@@ -14,6 +13,7 @@ export type WordProgress = {
 export const useUserProgress = () => {
   const { user } = useAuthContext();
   const { toast } = useToast();
+
   const { 
     progress, 
     isLoading, 
@@ -21,20 +21,17 @@ export const useUserProgress = () => {
     resetProgress: resetProgressMutation 
   } = useUserProgressQuery();
 
-  const loadUserProgress = useCallback(async (): Promise<WordProgress[]> => {
-    return progress;
-  }, [progress]);
+  // No change — progress is already cached
+  const loadUserProgress = useCallback(async () => progress, [progress]);
 
-  const updateWordProgress = useCallback(async (
-    wordId: number, 
-    isCorrect: boolean
-  ) => {
+  const updateWordProgress = useCallback(async (wordId: number, isCorrect: boolean) => {
     if (!user) return;
 
     try {
-      updateProgress({ wordId, isCorrect });
-    } catch (error: any) {
-      console.error('Error updating word progress:', error);
+      // Only update progress - avoid invalidating all queries
+      await updateProgress({ wordId, isCorrect }); 
+    } catch (error) {
+      console.error("Error updating word progress:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -43,53 +40,50 @@ export const useUserProgress = () => {
     }
   }, [user, toast, updateProgress]);
 
-  const getAllCategoryProgress = useCallback(async (
-    categories: { id: number; totalWords: number }[]
-  ): Promise<Record<number, number>> => {
-    if (!user) return {};
-
-    try {
-      const { data: allWords, error } = await supabase
-        .from('words')
-        .select('id, category_id');
-
-      if (error) throw error;
-
-      const categoryWordMap = allWords.reduce((acc, word) => {
-        if (!acc[word.category_id]) acc[word.category_id] = [];
-        acc[word.category_id].push(word.id);
-        return acc;
-      }, {} as Record<number, number[]>);
+  /**
+   * ⛔ NO MORE SUPABASE CALL HERE ⛔
+   * We use words that are already fetched in Learning.tsx
+   */
+  const getAllCategoryProgress = useCallback(
+    async (
+      words: { id: number; category_id: number | null }[],
+      categories: { id: number; totalWords: number }[]
+    ): Promise<Record<number, number>> => {
+      if (!user) return {};
 
       const progressMap: Record<number, number> = {};
 
-      categories.forEach(({ id, totalWords }) => {
-        const categoryWordIds = new Set(categoryWordMap[id] || []);
-        const masteredWords = progress.filter(
-          (p) => categoryWordIds.has(p.word_id) && p.correct > 0
+      for (const category of categories) {
+        const idsInCategory = new Set(
+          words
+            .filter(w => w.category_id === category.id)
+            .map(w => w.id)
+        );
+
+        const masteredCount = progress.filter(
+          p => idsInCategory.has(p.word_id) && p.correct > 0
         ).length;
 
-        progressMap[id] = Math.round((masteredWords / totalWords) * 100);
-      });
+        progressMap[category.id] = Math.round((masteredCount / category.totalWords) * 100);
+      }
 
       return progressMap;
-    } catch (error: any) {
-      console.error('Error calculating category progress:', error);
-      return {};
-    }
-  }, [user, progress]);
+    },
+    [user, progress]
+  );
 
   const resetProgress = useCallback(async () => {
     if (!user) return;
 
     try {
-      resetProgressMutation();
+      await resetProgressMutation();
+
       toast({
         title: "Progress Reset",
         description: "Your learning progress has been reset.",
       });
     } catch (error: any) {
-      console.error('Error resetting progress:', error);
+      console.error("Error resetting progress:", error);
       toast({
         variant: "destructive",
         title: "Error",
