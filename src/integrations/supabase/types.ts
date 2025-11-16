@@ -89,33 +89,6 @@ export type Database = {
         }
         Relationships: []
       }
-      medical_terms: {
-        Row: {
-          category: string | null
-          created_at: string
-          en: string
-          he: string
-          id: number
-          rus: string | null
-        }
-        Insert: {
-          category?: string | null
-          created_at?: string
-          en: string
-          he: string
-          id?: number
-          rus?: string | null
-        }
-        Update: {
-          category?: string | null
-          created_at?: string
-          en?: string
-          he?: string
-          id?: number
-          rus?: string | null
-        }
-        Relationships: []
-      }
       metadata: {
         Row: {
           key: string
@@ -170,30 +143,6 @@ export type Database = {
         }
         Relationships: []
       }
-      "profiles_duplicate-backup": {
-        Row: {
-          created_at: string
-          display_name: string | null
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       sentences_for_doctors: {
         Row: {
           en: string
@@ -225,6 +174,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_category_progress: {
+        Row: {
+          category_id: number
+          last_updated: string | null
+          progress: Json | null
+          user_id: string
+        }
+        Insert: {
+          category_id: number
+          last_updated?: string | null
+          progress?: Json | null
+          user_id: string
+        }
+        Update: {
+          category_id?: number
+          last_updated?: string | null
+          progress?: Json | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_consent: {
         Row: {
@@ -265,27 +235,6 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_id?: string
-        }
-        Relationships: []
-      }
-      user_mastered_words: {
-        Row: {
-          created_at: string
-          id: string
-          user_id: string
-          word_key: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          user_id: string
-          word_key: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          user_id?: string
-          word_key?: string
         }
         Relationships: []
       }
@@ -367,6 +316,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "words_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      words_duplicate_backup: {
+        Row: {
+          category_id: number | null
+          en: string
+          he: string
+          id: number
+          rus: string
+        }
+        Insert: {
+          category_id?: number | null
+          en: string
+          he: string
+          id?: number
+          rus: string
+        }
+        Update: {
+          category_id?: number | null
+          en?: string
+          he?: string
+          id?: number
+          rus?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "words_duplicate_backup_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
