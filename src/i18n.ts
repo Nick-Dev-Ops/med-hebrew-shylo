@@ -1,11 +1,12 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import { getLanguagePreference } from "@/cache/medicalTermsCache";
+import { getLanguagePreference } from "@/hooks/useLanguagePreference";
 
 async function getInitialLanguage() {
-  // Try to get from IndexedDB, fallback to localStorage, then default
+  // Get from localStorage
   let lang = null;
   try {
+    lang = getLanguagePreference();
     lang = await getLanguagePreference();
   } catch (e) {
     // ignore

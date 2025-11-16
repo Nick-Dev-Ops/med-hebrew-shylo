@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Book, HelpCircle, Type, Puzzle, IdCard, BookOpen, Sparkles, Users, TrendingUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getMedicalTermsWithCategories } from "@/cache/medicalTermsCache";
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -36,10 +36,8 @@ const features = [
 const Home = () => {
 	const { t } = useTranslation();
 	const { user } = useAuth();
-
-	useEffect(() => {
-		getMedicalTermsWithCategories();
-	}, []);
+	// Prefetch medical terms for faster page loads
+	useMedicalTerms();
 
 	return (
 		<>

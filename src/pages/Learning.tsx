@@ -3,7 +3,8 @@ import { Helmet } from "react-helmet-async";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { getMedicalTermsWithCategories, getCategories } from "@/cache/medicalTermsCache";
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
+import { useCategories } from "@/hooks/queries/useCategories";
 import { fetchHebrewSentence } from "@/utils/fetchHebrewSentence";
 import { BookOpen, ArrowLeft, Loader2, X, Volume2, RotateCcw, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -54,6 +55,8 @@ const Learning = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { updateWordProgress, getCategoryProgress, resetProgress } = useUserProgress();
+  const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
+  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
 
   const normalizeLang = (lang: string): Lang => {
     if (lang.startsWith("ru") || lang === "rus") return "rus";
@@ -82,13 +85,13 @@ const Learning = () => {
 
   /** Load words and categories */
   useEffect(() => {
-    (async () => {
-      const allWords = await getMedicalTermsWithCategories();
-      const allCategories = await getCategories();
-      setWords(allWords);
-      setCategories(allCategories);
+    if (!allWords.length || !allCategories.length) return;
 
-      // Load progress for each category
+    setWords(allWords);
+    setCategories(allCategories);
+
+    // Load progress for each category
+    (async () => {
       if (user) {
         const progressMap: Record<number, number> = {};
         for (const cat of allCategories) {
@@ -99,7 +102,7 @@ const Learning = () => {
         setCategoryProgress(progressMap);
       }
     })();
-  }, [user, getCategoryProgress]);
+  }, [allWords, allCategories, user, getCategoryProgress]);
 
   /** Start category */
   const startCategory = (category: Category) => {

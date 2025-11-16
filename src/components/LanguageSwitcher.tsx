@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import {
-  setLanguagePreference,
+  setLanguagePreferenceSync,
   getLanguagePreference,
-} from "@/cache/medicalTermsCache"
+} from "@/hooks/useLanguagePreference"
 
 const langs = [
   { code: "he", label: "עברית" },
@@ -23,17 +23,16 @@ const LanguageSwitcher = () => {
   const [currentLang, setCurrentLang] = useState(i18n.language);
 
   useEffect(() => {
-    getLanguagePreference().then((savedLang) => {
-      if (savedLang && savedLang !== i18n.language) {
-        i18n.changeLanguage(savedLang);
-        setCurrentLang(savedLang);
-      }
-    });
+    const savedLang = getLanguagePreference();
+    if (savedLang && savedLang !== i18n.language) {
+      i18n.changeLanguage(savedLang);
+      setCurrentLang(savedLang);
+    }
   }, []);
 
   const handleLanguageChange = async (lang: string) => {
     await i18n.changeLanguage(lang);
-    await setLanguagePreference(lang);
+    setLanguagePreferenceSync(lang);
     setCurrentLang(lang);
   };
 

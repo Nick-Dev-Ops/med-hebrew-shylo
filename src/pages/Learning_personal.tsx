@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { getMedicalTerms } from "@/cache/medicalTermsCache";
+import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useLearningProgress } from "@/hooks/useLearningProgress";
 import { useAuth } from "@/hooks/useAuth";
 import { BookOpen, Target, Trophy, ArrowLeft, RotateCcw } from "lucide-react";
@@ -29,6 +29,7 @@ interface Category {
 }
 
 const Learning = () => {
+  const { data: allMedicalTerms = [], isLoading } = useMedicalTerms();
   const [categories, setCategories] = useState<Category[]>([]);
   const [allWords, setAllWords] = useState<Word[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -51,8 +52,15 @@ const Learning = () => {
   } = useLearningProgress();
 
   useEffect(() => {
+    if (!allMedicalTerms.length) return;
+
     const loadCategories = async () => {
-      const words = await getMedicalTerms();
+      const words = allMedicalTerms.map(w => ({
+        en: w.en,
+        he: w.he,
+        rus: w.rus,
+        category: w.category?.name_en || 'Uncategorized'
+      }));
       setAllWords(words);
 
       await loadMasteredWords();
@@ -216,7 +224,12 @@ const Learning = () => {
     // await resetProgress();
     setInMemoryCorrectCounts({});
 
-    const words = await getMedicalTerms();
+    const words = allMedicalTerms.map(w => ({
+      en: w.en,
+      he: w.he,
+      rus: w.rus,
+      category: w.category?.name_en || 'Uncategorized'
+    }));
     const categoryMap: Record<string, GameCard[]> = {};
     for (const word of words) {
       if (!categoryMap[word.category]) categoryMap[word.category] = [];
