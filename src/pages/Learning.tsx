@@ -9,7 +9,7 @@ import { fetchHebrewSentence } from "@/utils/fetchHebrewSentence";
 import { BookOpen, ArrowLeft, Loader2, X, Volume2, RotateCcw, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUserProgress } from "@/hooks/useUserProgress";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/context/AuthContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +53,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 const Learning = () => {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const { updateWordProgress, getCategoryProgress, resetProgress } = useUserProgress();
   const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from "@/context/AuthContext";
 
 interface MasteredWord {
   user_id: string;
@@ -44,7 +44,7 @@ async function removeMasteredWord(userId: string, wordKey: string): Promise<void
 }
 
 export function useMasteredWords() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const userId = user?.id;
 

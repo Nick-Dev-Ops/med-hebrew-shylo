@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from "@/context/AuthContext";
 
 export interface WordProgress {
   word_id: number;
@@ -80,7 +80,7 @@ async function resetUserProgress(userId: string): Promise<void> {
 }
 
 export function useUserProgressQuery() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const queryClient = useQueryClient();
   const userId = user?.id;
 
