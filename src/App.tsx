@@ -16,7 +16,6 @@ import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
-import ResetPassword from "./pages/ResetPassword";
 import { HelmetProvider } from "react-helmet-async";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "@/context/AuthContext";
