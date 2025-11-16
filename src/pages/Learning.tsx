@@ -23,35 +23,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageContainer, PageHeader, CompletionScreen, CategoryCard } from "@/components/common";
 
-type Word = {
-  id: number;
-  en: string;
-  he: string;
-  rus: string;
-  category_id?: number | null;
-};
-
-type Category = {
-  id: number;
-  slug: string;
-  name_en: string;
-  name_he: string;
-  name_ru: string;
-};
-
-type GameMode = "categories" | "playing" | "finished";
-type Lang = "en" | "rus";
-
-// Shuffle helper
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
 const Learning = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuthContext();
@@ -59,41 +30,51 @@ const Learning = () => {
   const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
 
-  const normalizeLang = (lang: string): Lang => {
+  const [words, setWords] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryProgress, setCategoryProgress] = useState({});
+  const [deck, setDeck] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [options, setOptions] = useState([]);
+  const [feedback, setFeedback] = useState("");
+  const [gameMode, setGameMode] = useState("categories");
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+  const [lastAnswers, setLastAnswers] = useState([]);
+  const [showExample, setShowExample] = useState({ visible: false, sentence: "" });
+  const [loadingExample, setLoadingExample] = useState(false);
+  const [showSentenceButton, setShowSentenceButton] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [answersMap, setAnswersMap] = useState({});
+  const [sessionProgress, setSessionProgress] = useState({});
+  const [pendingUpdates, setPendingUpdates] = useState([]);
+
+  const normalizeLang = (lang) => {
     if (lang.startsWith("ru") || lang === "rus") return "rus";
-    return "en"; // default English
+    return "en";
   };
   const targetLang = normalizeLang(i18n.language);
 
-  const [words, setWords] = useState<Word[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [categoryProgress, setCategoryProgress] = useState<Record<number, number>>({});
+  const savePendingUpdates = useCallback(async () => {
+    if (pendingUpdates.length === 0) return;
 
-  // Deck handling
-  const [deck, setDeck] = useState<Word[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [options, setOptions] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<string>("");
-  const [gameMode, setGameMode] = useState<GameMode>("categories");
-  const [showAnswer, setShowAnswer] = useState(false);
-  const [showNext, setShowNext] = useState(false);
-  const [lastAnswers, setLastAnswers] = useState<{index: number, answer: string}[]>([]);
-  const [showExample, setShowExample] = useState<{visible: boolean, sentence: string}>({visible: false, sentence: ""});
-  const [loadingExample, setLoadingExample] = useState(false);
-  const [showSentenceButton, setShowSentenceButton] = useState(false);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [answersMap, setAnswersMap] = useState<Record<number, string>>({});
-  const [sessionProgress, setSessionProgress] = useState<Record<number, any>>({});
+    try {
+      for (const update of pendingUpdates) {
+        await updateWordProgress(update.wordId, update.isCorrect);
+      }
+      setPendingUpdates([]);
+    } catch (error) {
+      console.error("Error saving pending updates:", error);
+    }
+  }, [pendingUpdates, updateWordProgress]);
 
-  /** Load words and categories on mount */
   useEffect(() => {
     if (!allWords.length || !allCategories.length) return;
 
     setWords(allWords);
     setCategories(allCategories);
 
-    // Load progress for all categories in a single request
     (async () => {
       if (user) {
         const categoriesWithWordCount = allCategories.map((cat) => {
@@ -107,6 +88,29 @@ const Learning = () => {
     })();
   }, [allWords, allCategories, user, getAllCategoryProgress]);
 
+  useEffect(() => {
+    const handleBeforeUnload = async (event) => {
+      if (pendingUpdates.length > 0) {
+        event.preventDefault();
+        await savePendingUpdates();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [pendingUpdates, savePendingUpdates]);
+
+  // Shuffle helper
+  function shuffle(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
   /** Shuffle and start a category */
   const startCategory = (category: Category) => {
     const categoryWords = words.filter((w) => w.category_id === category.id);
