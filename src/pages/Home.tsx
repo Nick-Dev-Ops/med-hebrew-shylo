@@ -7,7 +7,7 @@ import { Book, HelpCircle, Type, Puzzle, IdCard, BookOpen, Sparkles, Users, Tren
 import { useTranslation } from "react-i18next";
 import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/context/AuthContext";
 
 const features = [
 	{
@@ -35,7 +35,7 @@ const features = [
 
 const Home = () => {
 	const { t } = useTranslation();
-	const { user } = useAuth();
+	const { user } = useAuthContext();
 	// Prefetch medical terms for faster page loads
 	useMedicalTerms();
 
