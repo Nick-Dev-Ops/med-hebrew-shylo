@@ -30,71 +30,61 @@ const Dictionary = () => {
   const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
 
-  const [rawWords, setRawWords] = useState<Word[]>([]);       // <— Original words (never filtered)
-  const [filteredWords, setFilteredWords] = useState<Word[]>([]); // <— Filtered output
+  const [baseWords, setBaseWords] = useState<Word[]>([]);
+  const [filteredWords, setFilteredWords] = useState<Word[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const loading = wordsLoading || categoriesLoading;
 
-  // -------------------------------------
-  // 1) Build RAW words list (stable base)
-  // -------------------------------------
+  // Initialize categories and base words
   useEffect(() => {
     if (!allWords.length || !allCategories.length) return;
 
-    const validCategories = allCategories.filter(
+    // Filter out the "Фразы для пациентов" category
+    const filteredCategories = allCategories.filter(
       (cat) => cat.name_ru !== "Фразы для пациентов"
     );
-    setCategories(validCategories);
+    setCategories(filteredCategories);
 
-    const mapped = allWords
+    // Map words to include category object
+    const mappedWords = allWords
       .filter((w) => {
-        const catIds = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-        return !catIds.includes(5);
+        const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
+        return !ids.includes(5); // Remove words in category 5
       })
       .map((w) => {
         const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-        const matchedCategory =
-          ids.length === 0 || ids[0] == null
-            ? null
-            : validCategories.find((c) => ids.includes(c.id)) ?? null;
-
+        const matchedCategory = filteredCategories.find((c) => ids.includes(c.id)) ?? null;
         return { ...w, category: matchedCategory };
-      })
-      .sort((a, b) => {
-        const aId = a.category?.id ?? 999999;
-        const bId = b.category?.id ?? 999999;
-        return aId - bId;
       });
 
-    setRawWords(mapped);
-    setFilteredWords(mapped);   // initialize view
+    // Sort words by category id (uncategorized at the end)
+    const sorted = mappedWords.sort((a, b) => {
+      const aId = a.category?.id ?? Number.MAX_SAFE_INTEGER;
+      const bId = b.category?.id ?? Number.MAX_SAFE_INTEGER;
+      return aId - bId;
+    });
+
+    setBaseWords(sorted);
+    setFilteredWords(sorted);
   }, [allWords, allCategories]);
 
-  // -------------------------------------
-  // 2) Apply Filters to rawWords
-  // -------------------------------------
+  // Filter words by category and search query
   useEffect(() => {
-    if (!rawWords.length) {
-      setFilteredWords([]);
-      return;
-    }
+    if (!baseWords.length) return;
 
-    let filtered = [...rawWords];
+    let filtered = [...baseWords];
 
-    // Category filtering
     if (selectedCategory) {
       filtered = filtered.filter((w) => {
-        if (Array.isArray(w.category_id)) {
-          return w.category_id.map(String).includes(selectedCategory);
-        }
-        return w.category_id?.toString() === selectedCategory;
+        const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
+        return ids.map(String).includes(selectedCategory);
       });
     }
 
-    // Search filtering
     if (searchQuery.trim()) {
       const fuse = new Fuse(filtered, {
         keys: ["he", "en", "rus"],
@@ -105,7 +95,29 @@ const Dictionary = () => {
     }
 
     setFilteredWords(filtered);
-  }, [selectedCategory, searchQuery, rawWords]);
+  }, [selectedCategory, searchQuery, baseWords]);
+
+  const toggleFavorite = (he: string) => {
+    setFavorites((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(he)) newSet.delete(he);
+      else newSet.add(he);
+      return newSet;
+    });
+  };
+
+  const exportFavorites = () => {
+    const exportList = baseWords.filter((w) => favorites.has(w.he));
+    const blob = new Blob([JSON.stringify(exportList, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "favorites.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getCategoryLabel = (cat: Category | null) => {
     if (!cat) return "";
@@ -125,18 +137,28 @@ const Dictionary = () => {
         <title>{t("dictionary_title")}</title>
         <meta name="description" content={t("dictionary_description")} />
       </Helmet>
-
       <PageContainer maxWidth="6xl" className="py-10">
+        {/* Header */}
         <header className="text-center mb-8">
           <motion.h1
             className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
           >
             {t("dictionary_title")}
           </motion.h1>
+          <motion.p
+            className="mt-4 text-lg text-gray-600 dark:text-gray-300 max-w-xl mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+          >
+            {t("dictionary_description")}
+          </motion.p>
         </header>
 
+        {/* Controls */}
         <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
           <Input
             placeholder={t("search_placeholder")}
@@ -144,11 +166,10 @@ const Dictionary = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="min-w-[200px]"
           />
-
           <select
             value={selectedCategory ?? ""}
             onChange={(e) => setSelectedCategory(e.target.value || null)}
-            className="px-3 py-2 border rounded-md bg-background"
+            className="px-3 py-2 border rounded-md bg-background focus:outline-none"
           >
             <option value="">{t("all_categories")}</option>
             {categories.map((cat) => (
@@ -157,24 +178,37 @@ const Dictionary = () => {
               </option>
             ))}
           </select>
+          <button
+            onClick={exportFavorites}
+            className="px-4 py-2 bg-primary text-white rounded-md"
+          >
+            {t("export_favorites")}
+          </button>
         </div>
 
+        {/* Word Grid */}
         {loading ? (
-          <p className="text-center mt-10">{t("loading")}</p>
+          <p className="text-center text-muted-foreground mt-10">{t("loading")}</p>
         ) : filteredWords.length === 0 ? (
-          <p className="text-center mt-10">{t("no_words")}</p>
+          <p className="text-center text-muted-foreground mt-10">{t("no_words")}</p>
         ) : (
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWords.map((word) => (
-              <motion.div key={word.he} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle>{word.he}</CardTitle>
-                    <CardDescription>
-                      EN: {word.en} <br />
-                      RU: {word.rus} <br />
-                      {getCategoryLabel(word.category)}
-                    </CardDescription>
+              <motion.div
+                key={word.he}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Card className="h-full overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow">
+                  <CardHeader className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{word.he}</CardTitle>
+                      <CardDescription>
+                        EN: {word.en} <br />
+                        RU: {word.rus} <br />
+                        {word.category && getCategoryLabel(word.category)}
+                      </CardDescription>
+                    </div>
                   </CardHeader>
                 </Card>
               </motion.div>
@@ -187,3 +221,4 @@ const Dictionary = () => {
 };
 
 export default Dictionary;
+`
