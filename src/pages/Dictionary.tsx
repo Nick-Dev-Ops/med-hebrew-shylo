@@ -1,123 +1,67 @@
+// Dictionary.tsx
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
-import { useMedicalTerms } from "@/hooks/queries/useMedicalTerms";
-import { useCategories } from "@/hooks/queries/useCategories";
+import { useMedicalTerms, MedicalTerm } from "@/hooks/queries/useMedicalTerms";
+import { useCategories, Category } from "@/hooks/queries/useCategories";
 import Fuse from "fuse.js";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/common";
-
-type Category = {
-  id: number;
-  slug: string;
-  name_en: string;
-  name_he: string;
-  name_ru: string;
-};
-
-type Word = {
-  en: string;
-  he: string;
-  rus: string;
-  category_id?: number | number[];
-  category?: Category | null;
-};
 
 const Dictionary = () => {
   const { t, i18n } = useTranslation();
   const { data: allWords = [], isLoading: wordsLoading } = useMedicalTerms();
   const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
 
-  const [baseWords, setBaseWords] = useState<Word[]>([]);
-  const [filteredWords, setFilteredWords] = useState<Word[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [baseWords, setBaseWords] = useState<MedicalTerm[]>([]);
+  const [filteredWords, setFilteredWords] = useState<MedicalTerm[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const loading = wordsLoading || categoriesLoading;
 
-  // Initialize categories and base words
   useEffect(() => {
     if (!allWords.length || !allCategories.length) return;
 
-    // Filter out the "Фразы для пациентов" category
-    const filteredCategories = allCategories.filter(
-      (cat) => cat.name_ru !== "Фразы для пациентов"
-    );
-    setCategories(filteredCategories);
+    // Remove category "Фразы для пациентов" (id=5)
+    const filteredCategories = allCategories.filter(cat => cat.name_ru !== "Фразы для пациентов");
 
-    // Map words to include category object
+    // Remove words from category_id 5 and assign flattened category
     const mappedWords = allWords
-      .filter((w) => {
-        const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-        return !ids.includes(5); // Remove words in category 5
-      })
-      .map((w) => {
-        const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-        const matchedCategory = filteredCategories.find((c) => ids.includes(c.id)) ?? null;
-        return { ...w, category: matchedCategory };
-      });
+      .filter(word => word.category_id !== 5)
+      .map(word => ({
+        ...word,
+        category: filteredCategories.find(c => c.id === word.category_id) ?? null,
+      }));
 
-    // Sort words by category id (uncategorized at the end)
-    const sorted = mappedWords.sort((a, b) => {
-      const aId = a.category?.id ?? Number.MAX_SAFE_INTEGER;
-      const bId = b.category?.id ?? Number.MAX_SAFE_INTEGER;
-      return aId - bId;
-    });
-
-    setBaseWords(sorted);
-    setFilteredWords(sorted);
+    setBaseWords(mappedWords);
+    setFilteredWords(mappedWords);
   }, [allWords, allCategories]);
 
-  // Filter words by category and search query
   useEffect(() => {
     if (!baseWords.length) return;
 
     let filtered = [...baseWords];
 
-    if (selectedCategory) {
-      filtered = filtered.filter((w) => {
-        const ids = Array.isArray(w.category_id) ? w.category_id : [w.category_id];
-        return ids.map(String).includes(selectedCategory);
-      });
+    // Filter by category
+    if (selectedCategory !== null) {
+      filtered = filtered.filter(w => w.category_id === selectedCategory);
     }
 
+    // Filter by search
     if (searchQuery.trim()) {
       const fuse = new Fuse(filtered, {
         keys: ["he", "en", "rus"],
         threshold: 0.3,
         ignoreLocation: true,
       });
-      filtered = fuse.search(searchQuery.trim()).map((r) => r.item);
+      filtered = fuse.search(searchQuery.trim()).map(r => r.item);
     }
 
     setFilteredWords(filtered);
   }, [selectedCategory, searchQuery, baseWords]);
-
-  const toggleFavorite = (he: string) => {
-    setFavorites((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(he)) newSet.delete(he);
-      else newSet.add(he);
-      return newSet;
-    });
-  };
-
-  const exportFavorites = () => {
-    const exportList = baseWords.filter((w) => favorites.has(w.he));
-    const blob = new Blob([JSON.stringify(exportList, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "favorites.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const getCategoryLabel = (cat: Category | null) => {
     if (!cat) return "";
@@ -138,7 +82,6 @@ const Dictionary = () => {
         <meta name="description" content={t("dictionary_description")} />
       </Helmet>
       <PageContainer maxWidth="6xl" className="py-10">
-        {/* Header */}
         <header className="text-center mb-8">
           <motion.h1
             className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-4"
@@ -158,7 +101,6 @@ const Dictionary = () => {
           </motion.p>
         </header>
 
-        {/* Controls */}
         <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
           <Input
             placeholder={t("search_placeholder")}
@@ -168,34 +110,29 @@ const Dictionary = () => {
           />
           <select
             value={selectedCategory ?? ""}
-            onChange={(e) => setSelectedCategory(e.target.value || null)}
+            onChange={(e) =>
+              setSelectedCategory(e.target.value ? Number(e.target.value) : null)
+            }
             className="px-3 py-2 border rounded-md bg-background focus:outline-none"
           >
             <option value="">{t("all_categories")}</option>
-            {categories.map((cat) => (
+            {allCategories.map(cat => (
               <option key={cat.id} value={cat.id}>
                 {getCategoryLabel(cat)}
               </option>
             ))}
           </select>
-          <button
-            onClick={exportFavorites}
-            className="px-4 py-2 bg-primary text-white rounded-md"
-          >
-            {t("export_favorites")}
-          </button>
         </div>
 
-        {/* Word Grid */}
         {loading ? (
           <p className="text-center text-muted-foreground mt-10">{t("loading")}</p>
         ) : filteredWords.length === 0 ? (
           <p className="text-center text-muted-foreground mt-10">{t("no_words")}</p>
         ) : (
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredWords.map((word) => (
+            {filteredWords.map(word => (
               <motion.div
-                key={word.he}
+                key={word.id}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
               >
@@ -221,4 +158,3 @@ const Dictionary = () => {
 };
 
 export default Dictionary;
-`
