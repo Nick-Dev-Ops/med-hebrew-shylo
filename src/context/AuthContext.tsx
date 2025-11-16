@@ -16,39 +16,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSessionAndProfile = async () => {
-      setLoading(true);
-      const { data } = await supabase.auth.getSession();
-      const currentUser = data?.session?.user || null;
-      setUser(currentUser);
-      if (currentUser) {
-        // Fetch profile from public.profiles table
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single();
-        setProfile(profileData || null);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    };
-    getSessionAndProfile();
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Set up auth state listener FIRST
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
+      setLoading(false);
+      
+      // Defer profile fetching to avoid deadlock
       if (currentUser) {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single();
-        setProfile(profileData || null);
+        setTimeout(() => {
+          supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+            .then(({ data: profileData, error }) => {
+              if (error) {
+                console.error('Error fetching profile:', error);
+                setProfile(null);
+              } else {
+                setProfile(profileData || null);
+              }
+            });
+        }, 0);
       } else {
         setProfile(null);
       }
     });
+    
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data }) => {
+      const currentUser = data?.session?.user || null;
+      setUser(currentUser);
+      setLoading(false);
+      
+      if (currentUser) {
+        setTimeout(() => {
+          supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single()
+            .then(({ data: profileData, error }) => {
+              if (error) {
+                console.error('Error fetching profile:', error);
+                setProfile(null);
+              } else {
+                setProfile(profileData || null);
+              }
+            });
+        }, 0);
+      }
+    });
+    
     return () => {
       listener?.subscription.unsubscribe();
     };
