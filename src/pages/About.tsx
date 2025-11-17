@@ -10,14 +10,17 @@ const About = () => {
   return (
     <>
       <Helmet>
-        <title>About Us - Doctor Hebrew</title>
-        <meta name="description" content="Learn about our mission to help medical students in Israel overcome language barriers and simplify Hebrew medical terminology." />
+        <title>About Us</title>
+        <meta
+          name="description"
+          content="Learn how Med-Ivrit helps medical students, interns, and doctors whose first language is not Hebrew succeed in the Israeli medical system."
+        />
       </Helmet>
 
       <PageContainer maxWidth="4xl">
         <PageHeader
-          title="About Doctor Hebrew"
-          subtitle="Breaking language barriers in Israeli medical education"
+          title="Med-Ivrit"
+          subtitle="Supporting medical education for those who learn — and practice — in a language that isn't their own"
         />
 
         {/* Our Story */}
@@ -30,14 +33,15 @@ const About = () => {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-3">Our Story</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  Doctor Hebrew was born from a simple observation: international medical students in Israel face an enormous challenge 
-                  not just learning medicine, but learning it in Hebrew. What started as a small project by volunteers—medical students 
-                  and programmers—has grown into a comprehensive platform designed to bridge the language gap.
+                  Med-Ivrit was created by a small group of volunteers — programmers, medical students,
+                  and young doctors — who saw how difficult it is to study and practice medicine in Israel
+                  when Hebrew is not your first language.
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  Our team combines the firsthand experience of medical students who've struggled with Hebrew medical terminology 
-                  with the technical expertise of developers passionate about education. Together, we're building tools that make 
-                  learning medical Hebrew accessible, practical, and effective.
+                  Many of us went through that same struggle: trying to understand Hebrew medical
+                  terminology, adapting to clinical settings, and learning fast-paced professional language.
+                  We built this project so future students, interns, and immigrant doctors won’t have to face
+                  those challenges alone.
                 </p>
               </div>
             </div>
@@ -54,24 +58,25 @@ const About = () => {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-3">Our Mission</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  We're committed to helping medical students in Israel succeed by removing language barriers. Our mission is to:
+                  Our mission is simple: to help anyone in the Israeli medical world who struggles with Hebrew —
+                  from first-year students to interns and practicing doctors.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-1">✓</span>
-                    <span>Simplify complex Hebrew medical terminology into understandable, practical language</span>
+                    <span>Make Hebrew medical terminology understandable, clear, and easy to learn</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-1">✓</span>
-                    <span>Provide clear, accurate translations between Hebrew, English, and Russian</span>
+                    <span>Provide accurate translations between Hebrew, English, Russian, and more</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-1">✓</span>
-                    <span>Create interactive learning tools that make memorization easier and more effective</span>
+                    <span>Support medical interns and doctors adapting to Hebrew during clinical work</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary mt-1">✓</span>
-                    <span>Build a supportive community where students can learn together</span>
+                    <span>Create practical tools that help users study faster and navigate Israeli hospitals with confidence</span>
                   </li>
                 </ul>
               </div>
@@ -79,7 +84,7 @@ const About = () => {
           </CardContent>
         </Card>
 
-        {/* Who It's For */}
+        {/* Who We Serve */}
         <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4 mb-4">
@@ -88,32 +93,35 @@ const About = () => {
               </div>
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-3">Who We Serve</h2>
+
                 <div className="grid md:grid-cols-3 gap-6 mt-4">
                   <div className="text-center">
                     <div className="bg-secondary/50 p-4 rounded-lg mb-3">
                       <BookOpen className="h-8 w-8 text-primary mx-auto" />
                     </div>
-                    <h3 className="font-semibold mb-2">International Medical Students</h3>
+                    <h3 className="font-semibold mb-2">Medical Students</h3>
                     <p className="text-sm text-muted-foreground">
-                      Students studying medicine in Israel who need to master medical Hebrew quickly
+                      Students learning medicine in Israel who need help mastering Hebrew terminology
                     </p>
                   </div>
+
                   <div className="text-center">
                     <div className="bg-secondary/50 p-4 rounded-lg mb-3">
                       <Globe className="h-8 w-8 text-primary mx-auto" />
                     </div>
-                    <h3 className="font-semibold mb-2">New Immigrants</h3>
+                    <h3 className="font-semibold mb-2">Interns & Young Doctors</h3>
                     <p className="text-sm text-muted-foreground">
-                      Healthcare professionals transitioning to work in the Israeli medical system
+                      Medical professionals who must work in Hebrew during rounds, documentation, and patient care
                     </p>
                   </div>
+
                   <div className="text-center">
                     <div className="bg-secondary/50 p-4 rounded-lg mb-3">
                       <Languages className="h-8 w-8 text-primary mx-auto" />
                     </div>
-                    <h3 className="font-semibold mb-2">Hebrew Learners</h3>
+                    <h3 className="font-semibold mb-2">New Immigrants</h3>
                     <p className="text-sm text-muted-foreground">
-                      Anyone interested in learning medical Hebrew terminology and clinical phrases
+                      Olim and immigrants integrating into the Israeli healthcare system
                     </p>
                   </div>
                 </div>
@@ -132,14 +140,15 @@ const About = () => {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-3">Why We Exist</h2>
                 <p className="text-muted-foreground leading-relaxed mb-4">
-                  Medical education in Israel presents unique challenges for non-native Hebrew speakers. Existing translation tools 
-                  often miss the nuance of medical terminology, and traditional study methods don't account for the specific needs 
-                  of students learning in a second or third language.
+                  Studying or practicing medicine in Israel is demanding — and even more so for those who don’t speak
+                  Hebrew as their first language. Medical Hebrew is fast, technical, and full of subtle meaning that
+                  standard translation tools often fail to capture.
                 </p>
                 <p className="text-muted-foreground leading-relaxed">
-                  We saw the need for better translations, clearer explanations, and easy access to medical materials in a format 
-                  that actually works for busy medical students. Doctor Hebrew fills this gap by providing purpose-built tools that 
-                  understand both medicine and the challenges of language learning.
+                  We built Med-Ivrit to provide clear explanations, accurate translations, and practical learning tools
+                  for medical students, interns, and doctors. Our goal is to make medical education in Israel more
+                  accessible, inclusive, and achievable for anyone building their career here — no matter what language
+                  they grew up speaking.
                 </p>
               </div>
             </div>
@@ -156,23 +165,25 @@ const About = () => {
                   <span className="text-primary">🎯</span> Accessibility
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Medical education tools should be free and available to everyone who needs them
+                  Knowledge should be available to everyone — regardless of language or background
                 </p>
               </div>
+
               <div className="bg-secondary/30 p-4 rounded-lg">
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <span className="text-primary">🤝</span> Collaboration
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Built by students, for students, with input from the community we serve
+                  Built together with the community we aim to support
                 </p>
               </div>
+
               <div className="bg-secondary/30 p-4 rounded-lg">
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <span className="text-primary">💪</span> Community
+                  <span className="text-primary">💪</span> Empowerment
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Together we can overcome language barriers and support each other's success
+                  Helping students, interns, and doctors navigate the Israeli medical world with confidence
                 </p>
               </div>
             </div>
@@ -186,11 +197,12 @@ const About = () => {
               <Code className="h-12 w-12 text-primary mx-auto mb-2" />
               <h2 className="text-2xl font-bold mb-2">Join Our Mission</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                We welcome developers, translators, and medical students to contribute to this project. 
-                Whether you want to improve translations, add features, or help fellow students learn, 
-                there's a place for you in our community.
+                Whether you're a developer, translator, medical student, intern, or doctor —
+                you can help shape a better future for non-native Hebrew speakers in Israel's
+                medical system.
               </p>
             </div>
+
             <div className="flex flex-wrap justify-center gap-4 mt-6">
               <Link to="/ContactUs">
                 <Button size="lg" className="gap-2">
@@ -198,8 +210,14 @@ const About = () => {
                   Get In Touch
                 </Button>
               </Link>
+
               <Button size="lg" variant="outline" asChild>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="gap-2">
+                <a
+                  href="https://github.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gap-2"
+                >
                   <Code className="h-4 w-4" />
                   Contribute on GitHub
                 </a>
