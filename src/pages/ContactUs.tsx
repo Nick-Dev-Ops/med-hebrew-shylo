@@ -7,27 +7,55 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
 
-import { MessageSquare, Bug, Languages, Handshake } from "lucide-react";
+import { MessageSquare, Bug, Languages, Users, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
-const MAX_MESSAGE_CHARS = 1500; // client-side limit to prevent overly long submissions
+const MAX_MESSAGE_CHARS = 1500;
 const GENERIC_ERROR = "Sorry, something went wrong. Please try again later.";
 
 const ContactUs = () => {
-  // Get user from context
   const { user, profile } = useAuthContext();
 
-  // Contact fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-
-  // Telegram messaging state
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const [result, setResult] = useState<{ ok?: boolean; error?: string } | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  // Templates
+  const bugTemplate = `🐛 Bug Report:
+
+App area/page: 
+Steps to reproduce:
+Expected result:
+Actual result:
+Browser/OS:
+Screenshot link (optional):`;
+
+  const translationTemplate = `🌐 Translation Issue:
+
+Language:
+Phrase/word:
+Current translation:
+Suggested correction:
+Context (where it appears):`;
+
+  const featureTemplate = `💡 Feature Request:
+
+Feature description:
+Problem it solves:
+Who would benefit:`;
+
+  const collaborationTemplate = `🤝 Collaboration:
+
+Your role/background:
+How you'd like to help:
+Skills/expertise:
+Availability:
+Links (portfolio/GitHub/LinkedIn):`;
 
   useEffect(() => {
     if (profile) {
@@ -41,74 +69,49 @@ const ContactUs = () => {
     }
   }, [user, profile]);
 
-  // Optional: prefill a template if navigated with a query param like ?type=bug
+  // Prefill template based on URL query
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const type = params.get("type");
-    if (!type) return;
+    if (!type || message) return;
 
-    if (type === "bug" && !message) {
-      setMessage(
-        [
-          "Bug report:",
-          "- App area/page:",
-          "- Steps to reproduce:",
-          "- Expected result:",
-          "- Actual result:",
-          "- Browser/OS:",
-          "- Screenshot link (optional):",
-        ].join("\n")
-      );
-    } else if (type === "translation" && !message) {
-      setMessage(
-        [
-          "Translation issue:",
-          "- Language:",
-          "- Phrase/word:",
-          "- Current translation:",
-          "- Suggested correction:",
-          "- Context (where it appears):",
-        ].join("\n")
-      );
-    } else if (type === "collab" && !message) {
-      setMessage(
-        [
-          "Collaboration request:",
-          "- Your role/background:",
-          "- How you’d like to work together:",
-          "- Availability/timezone:",
-          "- Links (portfolio/GitHub/LinkedIn):",
-        ].join("\n")
-      );
+    const templates: Record<string, string> = {
+      bug: bugTemplate,
+      translation: translationTemplate,
+      feature: featureTemplate,
+      collab: collaborationTemplate
+    };
+
+    if (templates[type]) {
+      setMessage(templates[type]);
     }
-  }, [message]);
+  }, []);
 
   function clampMessage(input: string) {
-    // Enforce max length while typing
     return input.slice(0, MAX_MESSAGE_CHARS);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSending(true);
-    setResult(null);
+    setSuccess(false);
+    setError("");
 
     try {
       const trimmed = message.trim();
 
       if (!trimmed) {
-        setResult({ ok: false, error: "Please enter a message." });
+        setError("Please enter a message.");
         return;
       }
 
       if (trimmed.length > MAX_MESSAGE_CHARS) {
-        setResult({ ok: false, error: `Message is too long. Please keep it under ${MAX_MESSAGE_CHARS} characters.` });
+        setError(`Message is too long. Please keep it under ${MAX_MESSAGE_CHARS} characters.`);
         return;
       }
 
-      // If user is anonymous, encourage providing a reply email
       if (!user && !email.trim()) {
-        setResult({ ok: false, error: "Please include a reply email so a response can be sent." });
+        setError("Please include a reply email so we can respond to you.");
         return;
       }
 
@@ -135,23 +138,14 @@ const ContactUs = () => {
         body: JSON.stringify({ text: textToSend }),
       });
 
-      // Always provide user-friendly feedback; avoid exposing backend debug details
       if (resp.ok) {
-        setResult({ ok: true });
-        // Keep name/email for continuity; clear only the message
+        setSuccess(true);
         setMessage("");
       } else {
-        // Optionally log internally without surfacing to user
-        try {
-          const data = await resp.json();
-          // console.error("Contact send failed:", data); // keep disabled or behind a dev flag
-        } catch {
-          // ignore parse errors
-        }
-        setResult({ ok: false, error: GENERIC_ERROR });
+        setError(GENERIC_ERROR);
       }
     } catch {
-      setResult({ ok: false, error: GENERIC_ERROR });
+      setError(GENERIC_ERROR);
     } finally {
       setSending(false);
     }
@@ -160,55 +154,74 @@ const ContactUs = () => {
   return (
     <>
       <Helmet>
-        <title>Contact Us</title>
+        <title>Contact Us - Doctor Hebrew</title>
+        <meta name="description" content="Contact the Doctor Hebrew team for bug reports, feature requests, translations, or collaboration opportunities." />
       </Helmet>
-
-      <div className="container mx-auto max-w-3xl py-8 space-y-6">
-        {/* Page intro */}
-        <Card>
+      
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Contact Us
-            </CardTitle>
-            <CardDescription>
-              Found a bug, noticed a translation issue, or want to collaborate? Send a message and include a reply address so a response can be sent back quickly.
+            <CardTitle className="text-3xl font-bold text-center">Get In Touch</CardTitle>
+            <CardDescription className="text-center text-base">
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <Clock className="h-4 w-4" />
+                <span>We typically respond within 24-48 hours</span>
+              </div>
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-md border p-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Bug className="h-4 w-4" />
-                  Report a bug
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Include steps to reproduce, expected vs actual behavior, and your browser/OS.
-                </p>
-              </div>
-              <div className="rounded-md border p-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Languages className="h-4 w-4" />
-                  Translation issue
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Share the language, exact phrase, where it appears, and your suggested correction.
-                </p>
-              </div>
-              <div className="rounded-md border p-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Handshake className="h-4 w-4" />
-                  Work together
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Tell a bit about your background and how you’d like to collaborate.
-                </p>
+
+          <CardContent className="space-y-6">
+            {/* Why Contact Us Section */}
+            <div className="bg-secondary/30 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2 text-center">Why Reach Out?</h3>
+              <p className="text-sm text-muted-foreground text-center">
+                Your feedback is essential! We're a community-driven project built by medical students and developers. 
+                Every message helps us improve Doctor Hebrew for students everywhere.
+              </p>
+            </div>
+
+            {/* Quick Select Categories */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium">What can we help you with?</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMessage(bugTemplate)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-border hover:border-red-500 hover:bg-red-500/5 transition-all"
+                >
+                  <Bug className="h-5 w-5 text-red-500" />
+                  <span className="text-xs font-medium">Bug Report</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMessage(translationTemplate)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-border hover:border-blue-500 hover:bg-blue-500/5 transition-all"
+                >
+                  <Languages className="h-5 w-5 text-blue-500" />
+                  <span className="text-xs font-medium">Translation</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMessage(featureTemplate)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-border hover:border-green-500 hover:bg-green-500/5 transition-all"
+                >
+                  <MessageSquare className="h-5 w-5 text-green-500" />
+                  <span className="text-xs font-medium">Feature</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMessage(collaborationTemplate)}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-border hover:border-purple-500 hover:bg-purple-500/5 transition-all"
+                >
+                  <Users className="h-5 w-5 text-purple-500" />
+                  <span className="text-xs font-medium">Collaborate</span>
+                </button>
               </div>
             </div>
 
             <Separator />
 
-            {/* Submission form */}
+            {/* Contact Form */}
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -217,66 +230,76 @@ const ContactUs = () => {
                     id="name"
                     placeholder="Jane Doe"
                     value={name}
-                    onChange={(e) => setName(e.target.value.slice(0, 120))}
-                    autoComplete="name"
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Reply email</Label>
+                  <Label htmlFor="email">Reply email {!user && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="jane@example.com"
+                    placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value.slice(0, 254))}
-                    autoComplete="email"
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Just send a message</Label>
+                <Label htmlFor="message">Your message <span className="text-red-500">*</span></Label>
                 <Textarea
                   id="message"
-                  placeholder={profile?.full_name ? `Write your message here, ${profile.full_name}...` : user?.user_metadata?.full_name ? `Write your message here, ${user.user_metadata.full_name}...` : "Write your message here..."}
+                  placeholder="Tell us what's on your mind..."
                   value={message}
                   onChange={(e) => setMessage(clampMessage(e.target.value))}
-                  rows={8}
-                  required
+                  rows={10}
+                  className="resize-none"
                 />
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    If not signed in, include your email so a reply can be sent.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {message.length}/{MAX_MESSAGE_CHARS}
-                  </p>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Be as detailed as possible</span>
+                  <span>{message.length}/{MAX_MESSAGE_CHARS}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button type="submit" disabled={sending || !message.trim()}>
-                  {sending ? "Sending..." : "Send"}
-                </Button>
-              </div>
-
-              {result?.ok && (
-                <Alert>
-                  <AlertDescription>Message sent successfully!</AlertDescription>
-                </Alert>
-              )}
-              {result?.ok === false && (
-                <Alert variant="destructive">
-                  <AlertDescription>{result.error || GENERIC_ERROR}</AlertDescription>
-                </Alert>
-              )}
+              <Button
+                type="submit"
+                disabled={sending || !message.trim()}
+                className="w-full"
+                size="lg"
+              >
+                {sending ? "Sending..." : "Send Message"}
+              </Button>
             </form>
+
+            {/* Success Message with Animation */}
+            {success && (
+              <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 animate-fade-in">
+                <div className="flex items-start gap-3">
+                  <div className="bg-green-500 rounded-full p-1 animate-scale-in">
+                    <CheckCircle2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <AlertTitle className="text-green-800 dark:text-green-300 font-semibold">Message Sent Successfully! ✨</AlertTitle>
+                    <AlertDescription className="text-green-700 dark:text-green-400">
+                      Thank you for reaching out! We'll review your message and respond within 24-48 hours.
+                    </AlertDescription>
+                  </div>
+                </div>
+              </Alert>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <AlertTitle className="text-red-800 dark:text-red-300">Error</AlertTitle>
+                <AlertDescription className="text-red-700 dark:text-red-400">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
-
-        <p className="text-xs text-muted-foreground">
-          Thanks for helping improve the app—every report and suggestion makes a difference for learners and collaborators.
-        </p>
       </div>
     </>
   );
