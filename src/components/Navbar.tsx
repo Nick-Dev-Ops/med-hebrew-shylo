@@ -12,6 +12,7 @@ import { Menu, X, LogOut, User, GraduationCap } from "lucide-react";
 type NavItem = { nameKey: string; path: string };
 
 const navItems: NavItem[] = [
+	{ nameKey: "nav_about", path: "/About" },
 	{ nameKey: "nav_contactUs", path: "/ContactUs" },
 	{ nameKey: "nav_quiz", path: "/Quiz" },
 	{ nameKey: "nav_learning", path: "/Learning" },
@@ -28,8 +29,8 @@ const Navbar = () => {
 	const toggleMenu = () => setIsMobileMenuOpen((prev) => !prev);
 	const closeMenu = () => setIsMobileMenuOpen(false);
 
-		// Only allow Home, Quiz, and ContactUs for unauthenticated users
-		const allowedPaths = ["/", "/Quiz", "/ContactUs"];
+		// Only allow Home, Quiz, About, and ContactUs for unauthenticated users
+		const allowedPaths = ["/", "/Quiz", "/About", "/ContactUs"];
 		return (
 			<header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-900/80">
 				<div className="mx-auto flex items-center justify-between py-4 px-6">

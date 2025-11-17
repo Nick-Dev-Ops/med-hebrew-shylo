@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -334,38 +334,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "words_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      words_duplicate_backup: {
-        Row: {
-          category_id: number | null
-          en: string
-          he: string
-          id: number
-          rus: string
-        }
-        Insert: {
-          category_id?: number | null
-          en: string
-          he: string
-          id?: number
-          rus: string
-        }
-        Update: {
-          category_id?: number | null
-          en?: string
-          he?: string
-          id?: number
-          rus?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "words_duplicate_backup_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"

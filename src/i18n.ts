@@ -49,6 +49,7 @@ const i18nInit = async () => {
         nav_quiz: "Quiz",
         nav_matching_game: "Game",
         nav_dictionary: "Dictionary",
+        nav_about: "About",
         nav_contactUs: "ContactUs",
         nav_learning: "Learning",
         matching_title: "64-Word Matching Game",
